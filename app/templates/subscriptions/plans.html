@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Plans — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="h3 mb-2">Choisissez votre plan</h1>
+    <p class="text-muted">Passez à un plan supérieur à tout moment.</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    {% for key, plan in plans.items() %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card lf-stat-card h-100 {% if subscription and subscription.plan == key %}border-2 border-primary{% endif %}">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h4 class="mb-1">{{ plan.label }}</h4>
+                    <div class="display-4 fw-bold text-primary">
+                        {% if plan.price_eur == 0 %}Gratuit{% else %}{{ plan.price_eur }}€{% endif %}
+                    </div>
+                    {% if plan.price_eur > 0 %}
+                    <div class="text-muted small">/ mois</div>
+                    {% endif %}
+                </div>
+
+                <ul class="list-unstyled mb-4">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                        {{ plan.max_contacts if plan.max_contacts > 0 else 'Contacts illimités' }}
+                        {% if plan.max_contacts > 0 %} contacts{% endif %}
+                    </li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                        {{ plan.max_messages_month }} messages / mois
+                    </li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                        {{ plan.max_campaigns }} campagnes
+                    </li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                        {{ plan.max_whatsapp_accounts }} compte(s) WhatsApp
+                    </li>
+                    <li class="mb-2">
+                        {% if plan.advanced_stats %}
+                        <i class="bi bi-check-circle-fill text-success"></i> Statistiques avancées
+                        {% else %}
+                        <i class="bi bi-x-circle text-muted"></i> <span class="text-muted">Statistiques avancées</span>
+                        {% endif %}
+                    </li>
+                </ul>
+
+                {% if subscription and subscription.plan == key %}
+                <button class="btn btn-secondary w-100" disabled>Plan actuel</button>
+                {% else %}
+                <form method="POST" action="{{ url_for('subscriptions.change_plan', plan_key=key) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary w-100">
+                        {% if plan.price_eur == 0 %}Choisir ce plan{% else %}Passer à {{ plan.label }}{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

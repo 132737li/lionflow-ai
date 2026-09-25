@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if business else 'Nouvelle' }} entreprise — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('businesses.list_businesses') }}" class="btn btn-link text-decoration-none">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h3 mb-0">
+        {{ 'Modifier l\'entreprise' if business else 'Nouvelle entreprise' }}
+    </h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card lf-stat-card">
+            <div class="card-body p-4">
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.email.label(class="form-label") }}
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                            {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.phone.label(class="form-label") }}
+                            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
+                                          placeholder="79 123 456") }}
+                            {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            <div class="form-text">Numéro international accepté. Le pays sélectionné ci-dessous définit l'indicatif par défaut.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.address.label(class="form-label") }}
+                        {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else "")) }}
+                        {% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.country.label(class="form-label") }}
+                            {{ form.country(class="form-select" + (" is-invalid" if form.country.errors else "")) }}
+                            {% for e in form.country.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.logo.label(class="form-label") }}
+                            {{ form.logo(class="form-control", accept="image/*") }}
+                            {% if business and business.logo_path %}
+                            <div class="mt-2">
+                                <img src="{{ url_for('static', filename=business.logo_path) }}"
+                                     alt="Logo actuel" style="height: 48px;" class="rounded">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('businesses.list_businesses') }}" class="btn btn-light">Annuler</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Comptes WhatsApp — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-0">Comptes WhatsApp</h1>
+        <p class="text-muted mb-0">Gérez vos comptes WhatsApp Cloud API (Meta).</p>
+    </div>
+    <a href="{{ url_for('whatsapp.create_account') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nouveau compte
+    </a>
+</div>
+
+{% if accounts %}
+<div class="row g-3">
+    {% for a in accounts %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card lf-stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="lf-stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-whatsapp"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ a.name }}</h5>
+                            <span class="text-muted small">{{ a.phone_number }}</span>
+                        </div>
+                    </div>
+                    <span class="badge
+                        {% if a.status == 'connected' %}bg-success
+                        {% elif a.status == 'error' %}bg-danger
+                        {% else %}bg-secondary{% endif %}">
+                        {{ a.status }}
+                    </span>
+                </div>
+
+                <ul class="list-unstyled small text-muted mb-3">
+                    <li>
+                        <i class="bi bi-hash"></i> Phone ID :
+                        <code>{{ a.phone_number_id or '—' }}</code>
+                    </li>
+                    <li>
+                        <i class="bi bi-briefcase"></i> Business ID :
+                        <code>{{ a.business_account_id or '—' }}</code>
+                    </li>
+                    <li>
+                        <i class="bi bi-key"></i> Token :
+                        {% if a.has_token %}
+                        <span class="text-success">✓ configuré</span>
+                        {% else %}
+                        <span class="text-danger">✗ manquant</span>
+                        {% endif %}
+                    </li>
+                    {% if a.connected_at %}
+                    <li>
+                        <i class="bi bi-clock-history"></i> Connecté le
+                        {{ a.connected_at.strftime('%d/%m/%Y %H:%M') }}
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('whatsapp.edit_account', account_id=a.id) }}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i> Modifier
+                    </a>
+                    <form method="POST" action="{{ url_for('whatsapp.test_connection', account_id=a.id) }}"
+                          class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plug"></i> Tester
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal" data-bs-target="#delModal{{ a.id }}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="delModal{{ a.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Supprimer le compte</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Supprimer définitivement <strong>{{ a.name }}</strong> ?
+                    <p class="text-danger small mt-2 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Les campagnes associées perdront leur compte d'envoi.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <form method="POST" action="{{ url_for('whatsapp.delete_account', account_id=a.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card lf-stat-card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-whatsapp fs-1 text-success"></i>
+        <h4 class="mt-3">Aucun compte WhatsApp</h4>
+        <p class="text-muted">
+            Connectez un compte WhatsApp Cloud API pour commencer à envoyer des messages.
+        </p>
+        <a href="{{ url_for('whatsapp.create_account') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Connecter un compte
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="card lf-stat-card mt-4">
+    <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-info-circle"></i> Où trouver ces informations ?</h6></div>
+    <div class="card-body small">
+        <ol class="mb-0">
+            <li>Allez sur <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com</a>.</li>
+            <li>Créez une app de type <strong>Business</strong> puis ajoutez le produit <strong>WhatsApp</strong>.</li>
+            <li>Récupérez le <strong>Phone Number ID</strong> et le <strong>WhatsApp Business Account ID</strong> dans la section "API Setup".</li>
+            <li>Générez un <strong>Access Token</strong> permanent (System User Token recommandé).</li>
+            <li>Configurez le webhook : URL <code>{{ config.APP_BASE_URL }}/whatsapp/webhook</code>, token : <code>{{ config.WHATSAPP_VERIFY_TOKEN }}</code>, et abonnez-vous aux événements <code>messages</code>.</li>
+        </ol>
+    </div>
+</div>
+{% endblock %}

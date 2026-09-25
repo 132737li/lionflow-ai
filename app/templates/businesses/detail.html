@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ business.name }} — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+        {% if business.logo_path %}
+        <img src="{{ url_for('static', filename=business.logo_path) }}"
+             alt="Logo" class="rounded" style="width: 64px; height: 64px; object-fit: cover;">
+        {% else %}
+        <div class="lf-stat-icon bg-primary-subtle text-primary" style="width: 64px; height: 64px; font-size: 2rem;">
+            <i class="bi bi-building"></i>
+        </div>
+        {% endif %}
+        <div>
+            <h1 class="h3 mb-0">{{ business.name }}</h1>
+            <span class="badge bg-primary-subtle text-primary-emphasis">
+                Plan {{ business.plan }}
+            </span>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('businesses.edit_business', business_id=business.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil"></i> Modifier
+        </a>
+        {% if not (g.current_business and g.current_business.id == business.id) %}
+        <form method="POST" action="{{ url_for('businesses.switch_business', business_id=business.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-outline-success" type="submit">
+                <i class="bi bi-arrow-repeat"></i> Rendre active
+            </button>
+        </form>
+        {% endif %}
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="bi bi-trash"></i> Supprimer
+        </button>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card lf-stat-card">
+            <div class="card-header bg-white"><h5 class="mb-0">Informations</h5></div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Email</dt>
+                    <dd class="col-sm-9">{{ business.email or '—' }}</dd>
+                    <dt class="col-sm-3">Téléphone</dt>
+                    <dd class="col-sm-9">{{ business.phone or '—' }}</dd>
+                    <dt class="col-sm-3">Adresse</dt>
+                    <dd class="col-sm-9">{{ business.address or '—' }}</dd>
+                    <dt class="col-sm-3">Pays</dt>
+                    <dd class="col-sm-9">{{ business.country or '—' }}</dd>
+                    <dt class="col-sm-3">Créée le</dt>
+                    <dd class="col-sm-9">
+                        {{ business.created_at.strftime('%d/%m/%Y à %H:%M') if business.created_at else '—' }}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card lf-stat-card mb-3">
+            <div class="card-body text-center">
+                <div class="h1 mb-0">{{ business.contacts.count() }}</div>
+                <div class="text-muted small">Contacts</div>
+            </div>
+        </div>
+        <div class="card lf-stat-card mb-3">
+            <div class="card-body text-center">
+                <div class="h1 mb-0">{{ business.campaigns.count() }}</div>
+                <div class="text-muted small">Campagnes</div>
+            </div>
+        </div>
+        <div class="card lf-stat-card">
+            <div class="card-body text-center">
+                <div class="h1 mb-0">{{ business.whatsapp_accounts.count() }}</div>
+                <div class="text-muted small">Comptes WhatsApp</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Modal de suppression #}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Supprimer définitivement <strong>{{ business.name }}</strong> ?</p>
+                <p class="text-danger small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Tous les contacts, campagnes et messages associés seront supprimés.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('businesses.delete_business', business_id=business.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

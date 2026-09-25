@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if campaign else 'Nouvelle' }} campagne — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-link text-decoration-none">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h3 mb-0">
+        {{ 'Modifier la campagne' if campaign else 'Nouvelle campagne' }}
+    </h1>
+</div>
+
+<form method="POST" novalidate>
+    {{ form.hidden_tag() }}
+
+    <div class="row g-3">
+        {# Colonne gauche : paramètres #}
+        <div class="col-lg-7">
+            <div class="card lf-stat-card">
+                <div class="card-header bg-white"><h6 class="mb-0">Paramètres</h6></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.whatsapp_account_id.label(class="form-label") }} <span class="text-danger">*</span>
+                        {{ form.whatsapp_account_id(class="form-select") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.template_id.label(class="form-label") }}
+                        {{ form.template_id(class="form-select") }}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.message.label(class="form-label") }}
+                        {{ form.message(class="form-control" + (" is-invalid" if form.message.errors else ""), rows=6) }}
+                        {% for e in form.message.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        <div class="form-text">
+                            Variables : <code>{{ '{{prenom}}' }}</code>, <code>{{ '{{nom}}' }}</code>,
+                            <code>{{ '{{entreprise}}' }}</code>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.scheduled_at.label(class="form-label") }}
+                            {{ form.scheduled_at(class="form-control", type="datetime-local") }}
+                            <div class="form-text">Laisser vide pour un brouillon.</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.timezone.label(class="form-label") }}
+                            {{ form.timezone(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Colonne droite : contacts #}
+        <div class="col-lg-5">
+            <div class="card lf-stat-card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Contacts ciblés</h6>
+                    <span class="badge bg-primary-subtle text-primary-emphasis" id="contactCounter">0</span>
+                </div>
+                <div class="card-body">
+                    <input type="text" id="contactSearch" class="form-control form-control-sm mb-2"
+                           placeholder="Filtrer les contacts…">
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="selectAllContacts">
+                        <label class="form-check-label small" for="selectAllContacts">Tout sélectionner</label>
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;" id="contactsContainer">
+                        {% for subfield in form.contact_ids %}
+                        <div class="form-check contact-item">
+                            {{ subfield(class="form-check-input contact-check") }}
+                            {{ subfield.label(class="form-check-label small") }}
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mb-0">Aucun contact actif disponible.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-light">Annuler</a>
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Compteur de contacts sélectionnés
+const counter = document.getElementById('contactCounter');
+const checks = document.querySelectorAll('.contact-check');
+function updateCounter() {
+    const n = document.querySelectorAll('.contact-check:checked').length;
+    if (counter) counter.textContent = n;
+}
+checks.forEach(c => c.addEventListener('change', updateCounter));
+updateCounter();
+
+// Sélection globale
+const selectAll = document.getElementById('selectAllContacts');
+if (selectAll) {
+    selectAll.addEventListener('change', () => {
+        document.querySelectorAll('.contact-item:not([style*="display: none"]) .contact-check')
+            .forEach(c => { c.checked = selectAll.checked; });
+        updateCounter();
+    });
+}
+
+// Recherche locale
+const searchInput = document.getElementById('contactSearch');
+if (searchInput) {
+    searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase();
+        document.querySelectorAll('.contact-item').forEach(el => {
+            el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    });
+}
+</script>
+{% endblock %} ,lkp)oàç.02

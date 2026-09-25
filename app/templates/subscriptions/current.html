@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Abonnement — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-0">Mon abonnement</h1>
+        <p class="text-muted mb-0">Gérez votre plan et consultez votre consommation.</p>
+    </div>
+    <a href="{{ url_for('subscriptions.plans') }}" class="btn btn-primary">
+        <i class="bi bi-arrow-up-circle"></i> Voir les plans
+    </a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Plan actuel</h5></div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <div class="display-6 fw-bold text-primary">{{ plan_config.label }}</div>
+                        <div class="text-muted">
+                            {% if plan_config.price_eur == 0 %}
+                                Gratuit
+                            {% else %}
+                                {{ plan_config.price_eur }} € / mois
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge
+                        {% if subscription and subscription.status == 'active' %}bg-success
+                        {% elif subscription and subscription.status == 'past_due' %}bg-warning
+                        {% else %}bg-secondary{% endif %} fs-6">
+                        {{ subscription.status if subscription else 'Aucun' }}
+                    </span>
+                </div>
+
+                {% if subscription and subscription.expires_at %}
+                <div class="mb-3">
+                    <small class="text-muted">Expire le :</small>
+                    <div>{{ subscription.expires_at.strftime('%d/%m/%Y') }}</div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-primary"
+                             style="width: {{ 100 - (subscription.days_remaining * 100 / 30) if subscription.days_remaining < 30 else 0 }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ subscription.days_remaining }} jour(s) restants</small>
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2">
+                    {% if subscription and subscription.plan != 'free' %}
+                    <form method="POST" action="{{ url_for('subscriptions.cancel') }}"
+                          data-confirm="Annuler votre abonnement ? Vous repasserez au plan Free.">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-x-circle"></i> Annuler l'abonnement
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Consommation</h5></div>
+            <div class="card-body">
+                {% set items = [
+                    ('Contacts', usage.contacts, plan_config.max_contacts, 'people'),
+                    ('Campagnes', usage.campaigns, plan_config.max_campaigns, 'megaphone'),
+                    ('Comptes WhatsApp', usage.whatsapp_accounts, plan_config.max_whatsapp_accounts, 'whatsapp'),
+                    ('Messages ce mois', usage.messages_this_month, plan_config.max_messages_month, 'envelope'),
+                ] %}
+                {% for label, used, limit, icon in items %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span><i class="bi bi-{{ icon }}"></i> {{ label }}</span>
+                        <span class="fw-semibold">
+                            {{ used }} / {% if limit == 0 %}∞{% else %}{{ limit }}{% endif %}
+                        </span>
+                    </div>
+                    {% if limit > 0 %}
+                    <div class="progress" style="height: 6px;">
+                        {% set pct = (used / limit * 100) | round(1) %}
+                        <div class="progress-bar
+                            {% if pct >= 90 %}bg-danger
+                            {% elif pct >= 70 %}bg-warning
+                            {% else %}bg-primary{% endif %}"
+                             style="width: {{ [pct, 100] | min }}%"></div>
+                    </div>
+                    {% else %}
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: 5%"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card lf-stat-card">
+    <div class="card-header bg-white"><h5 class="mb-0">Historique</h5></div>
+    {% if history %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr><th>Plan</th><th>Statut</th><th>Démarré</th><th>Expire</th></tr>
+            </thead>
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ h.plan }}</span></td>
+                    <td>{{ h.status }}</td>
+                    <td class="small text-muted">{{ h.started_at.strftime('%d/%m/%Y') if h.started_at else '—' }}</td>
+                    <td class="small text-muted">{{ h.expires_at.strftime('%d/%m/%Y') if h.expires_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center text-muted py-4">Aucun historique.</div>
+    {% endif %}
+</div>
+{% endblock %}

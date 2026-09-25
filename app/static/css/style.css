@@ -1,0 +1,191 @@
+/* ==========================================
+   LionFlow AI — Styles principaux
+   ========================================== */
+
+:root {
+    --lf-primary: #f59e0b;
+    /* Ambre "lion" */
+    --lf-primary-dark: #d97706;
+    --lf-sidebar-bg: #1e293b;
+    --lf-sidebar-hover: #334155;
+    --lf-sidebar-text: #cbd5e1;
+    --lf-sidebar-active: #f59e0b;
+    --lf-topbar-bg: #ffffff;
+    --lf-body-bg: #f8fafc;
+    --lf-sidebar-width: 250px;
+}
+
+body {
+    background-color: var(--lf-body-bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ===== Layout connecté ===== */
+#wrapper {
+    min-height: 100vh;
+}
+
+.lf-sidebar {
+    width: var(--lf-sidebar-width);
+    background: var(--lf-sidebar-bg);
+    color: var(--lf-sidebar-text);
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    transition: transform .25s ease;
+    z-index: 1000;
+}
+
+.lf-sidebar-brand {
+    padding: 1.25rem 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.lf-sidebar-brand i {
+    color: var(--lf-primary);
+}
+
+.lf-sidebar-nav {
+    padding: .75rem 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lf-nav-link {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .7rem 1.25rem;
+    color: var(--lf-sidebar-text);
+    text-decoration: none;
+    font-size: .95rem;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+}
+
+.lf-nav-link:hover {
+    background: var(--lf-sidebar-hover);
+    color: #fff;
+}
+
+.lf-nav-link.active {
+    background: rgba(245, 158, 11, .12);
+    color: var(--lf-sidebar-active);
+    border-left-color: var(--lf-sidebar-active);
+    font-weight: 600;
+}
+
+#page-content-wrapper {
+    margin-left: var(--lf-sidebar-width);
+    transition: margin-left .25s ease;
+    min-height: 100vh;
+}
+
+.lf-topbar {
+    background: var(--lf-topbar-bg);
+    border-bottom: 1px solid #e2e8f0;
+    padding: .75rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Sidebar toggle mobile */
+@media (max-width: 991.98px) {
+    .lf-sidebar {
+        transform: translateX(-100%);
+    }
+
+    .lf-sidebar.show {
+        transform: translateX(0);
+    }
+
+    #page-content-wrapper {
+        margin-left: 0;
+    }
+}
+
+#sidebarToggle {
+    color: #64748b;
+    text-decoration: none;
+}
+
+/* ===== Layout auth ===== */
+.lf-auth-wrapper {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%);
+}
+
+.lf-logo-badge {
+    width: 64px;
+    height: 64px;
+    background: var(--lf-sidebar-bg);
+    color: var(--lf-primary);
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+}
+
+/* ===== Avatar profil ===== */
+.lf-avatar-badge {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+}
+
+/* ===== Cartes statistiques ===== */
+.lf-stat-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    transition: transform .15s, box-shadow .15s;
+}
+
+.lf-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+}
+
+.lf-stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+/* ===== Boutons ===== */
+.btn-primary {
+    background-color: var(--lf-primary);
+    border-color: var(--lf-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--lf-primary-dark);
+    border-color: var(--lf-primary-dark);
+}
+
+/* ===== Formulaires ===== */
+.form-control:focus {
+    border-color: var(--lf-primary);
+    box-shadow: 0 0 0 .2rem rgba(245, 158, 11, .15);
+}

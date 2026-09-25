@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Contacts — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-0">Contacts</h1>
+        <p class="text-muted mb-0">
+            {{ total }} contact(s) dans
+            <strong>{{ business.name }}</strong>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('contacts.import_contacts') }}" class="btn btn-outline-primary">
+            <i class="bi bi-upload"></i> Importer
+        </a>
+        <a href="{{ url_for('contacts.create_contact') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Nouveau contact
+        </a>
+    </div>
+</div>
+
+{# ===== Filtres ===== #}
+<div class="card lf-stat-card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small mb-1">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ q }}"
+                           class="form-control" placeholder="Nom, email, téléphone, entreprise…">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="" {% if not status_filter %}selected{% endif %}>Tous</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actif</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactif</option>
+                    <option value="blocked" {% if status_filter == 'blocked' %}selected{% endif %}>Bloqué</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Tag</label>
+                <input type="text" name="tag" value="{{ tag_filter }}" class="form-control" placeholder="vip, client…">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                <a href="{{ url_for('contacts.list_contacts') }}" class="btn btn-light" title="Réinitialiser">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ===== Tableau ===== #}
+<div class="card lf-stat-card">
+    {% if contacts %}
+    <form method="POST" action="{{ url_for('contacts.bulk_delete') }}" id="bulkForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 32px;">
+                            <input type="checkbox" class="form-check-input" id="selectAll">
+                        </th>
+                        <th>Nom</th>
+                        <th>WhatsApp</th>
+                        <th>Email</th>
+                        <th>Entreprise</th>
+                        <th>Tags</th>
+                        <th>Statut</th>
+                        <th>Créé le</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in contacts %}
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="contact_ids" value="{{ c.id }}"
+                                   class="form-check-input row-check">
+                        </td>
+                        <td>
+                            <a href="{{ url_for('contacts.detail_contact', contact_id=c.id) }}"
+                               class="text-decoration-none fw-semibold">
+                                {{ c.full_name }}
+                            </a>
+                        </td>
+                        <td><i class="bi bi-whatsapp text-success"></i> {{ c.phone }}</td>
+                        <td>{{ c.email or '—' }}</td>
+                        <td>{{ c.company or '—' }}</td>
+                        <td>
+                            {% for t in c.tags_list %}
+                            <span class="badge bg-secondary-subtle text-secondary-emphasis">{{ t }}</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="badge
+                                {% if c.status == 'active' %}bg-success-subtle text-success-emphasis
+                                {% elif c.status == 'inactive' %}bg-warning-subtle text-warning-emphasis
+                                {% else %}bg-danger-subtle text-danger-emphasis{% endif %}">
+                                {{ c.status }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ c.created_at.strftime('%d/%m/%Y') if c.created_at else '—' }}
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('contacts.edit_contact', contact_id=c.id) }}"
+                               class="btn btn-sm btn-outline-secondary" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#delModal{{ c.id }}"
+                                    title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    data-confirm="Supprimer les contacts sélectionnés ?">
+                <i class="bi bi-trash"></i> Supprimer la sélection
+            </button>
+            <span class="text-muted small" id="selectedCount">0 sélectionné(s)</span>
+        </div>
+    </form>
+
+    {# Pagination #}
+    {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-center">
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('contacts.list_contacts', page=pagination.prev_num, q=q, status=status_filter, tag=tag_filter) }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if p %}
+                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('contacts.list_contacts', page=p, q=q, status=status_filter, tag=tag_filter) }}">{{ p }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                    {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('contacts.list_contacts', page=pagination.next_num, q=q, status=status_filter, tag=tag_filter) }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card-body text-center py-5">
+        <i class="bi bi-people fs-1 text-muted"></i>
+        <h4 class="mt-3">Aucun contact</h4>
+        <p class="text-muted">
+            {% if q or status_filter or tag_filter %}
+            Aucun résultat pour ces filtres.
+            <a href="{{ url_for('contacts.list_contacts') }}">Réinitialiser</a>
+            {% else %}
+            Commencez par ajouter un contact ou importer un fichier.
+            {% endif %}
+        </p>
+        <div class="d-flex gap-2 justify-content-center">
+            <a href="{{ url_for('contacts.create_contact') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Ajouter
+            </a>
+            <a href="{{ url_for('contacts.import_contacts') }}" class="btn btn-outline-primary">
+                <i class="bi bi-upload"></i> Importer
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# ===== Modales suppression individuelle ===== #}
+{% for c in contacts %}
+<div class="modal fade" id="delModal{{ c.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Supprimer le contact</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Supprimer définitivement <strong>{{ c.full_name }}</strong> ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('contacts.delete_contact', contact_id=c.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Sélection multiple
+const selectAll = document.getElementById('selectAll');
+const rowChecks = document.querySelectorAll('.row-check');
+const countEl = document.getElementById('selectedCount');
+
+function updateCount() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    if (countEl) countEl.textContent = n + ' sélectionné(s)';
+}
+if (selectAll) {
+    selectAll.addEventListener('change', () => {
+        rowChecks.forEach(c => c.checked = selectAll.checked);
+        updateCount();
+    });
+}
+rowChecks.forEach(c => c.addEventListener('change', updateCount));
+</script>
+{% endblock %}

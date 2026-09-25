@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Importer des contacts — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('contacts.list_contacts') }}" class="btn btn-link text-decoration-none">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h3 mb-0">Importer des contacts</h1>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card lf-stat-card">
+            <div class="card-header bg-white"><h5 class="mb-0">Fichier à importer</h5></div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.file.label(class="form-label") }}
+                        {{ form.file(class="form-control" + (" is-invalid" if form.file.errors else ""),
+                                    accept=".csv,.xlsx,.xls") }}
+                        {% for e in form.file.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        <div class="form-text">
+                            Formats : .csv, .xlsx, .xls — max {{ config.MAX_CONTENT_LENGTH // (1024*1024) }} Mo
+                        </div>
+                    </div>
+
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </form>
+            </div>
+        </div>
+
+        <div class="card lf-stat-card mt-3">
+            <div class="card-header bg-white"><h5 class="mb-0">Colonnes reconnues</h5></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Les en-têtes sont détectés automatiquement (insensible à la casse, aux accents).
+                    La colonne du numéro est <strong>obligatoire</strong>.
+                </p>
+                <table class="table table-sm small mb-0">
+                    <thead>
+                        <tr><th>Champ</th><th>Alias acceptés</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>phone</strong> *</td>
+                            <td>phone, telephone, whatsapp, numero, mobile, tel</td>
+                        </tr>
+                        <tr>
+                            <td>first_name</td>
+                            <td>first_name, prenom, given name</td>
+                        </tr>
+                        <tr>
+                            <td>last_name</td>
+                            <td>last_name, nom, surname</td>
+                        </tr>
+                        <tr>
+                            <td>email</td>
+                            <td>email, mail, courriel</td>
+                        </tr>
+                        <tr>
+                            <td>company</td>
+                            <td>company, entreprise, societe</td>
+                        </tr>
+                        <tr>
+                            <td>tags</td>
+                            <td>tags, labels, categories</td>
+                        </tr>
+                        <tr>
+                            <td>status</td>
+                            <td>status, statut</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <hr>
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-download text-primary"></i>
+                    <a href="data:text/csv;charset=utf-8,prenom,nom,phone,email,company,tags%0AJean,Dupont,+33612345678,jean@exemple.com,ACME,vip%0A"
+                       download="modele_contacts.csv" class="small">
+                        Télécharger un modèle CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        {% if report %}
+        {# ===== Rapport d'import ===== #}
+        <div class="card lf-stat-card mb-3">
+            <div class="card-header bg-white"><h5 class="mb-0">Rapport d'importation</h5></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="text-center">
+                            <div class="h3 mb-0">{{ report.total_rows }}</div>
+                            <div class="small text-muted">Lignes</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center">
+                            <div class="h3 mb-0 text-success">{{ report.added }}</div>
+                            <div class="small text-muted">Ajoutés</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center">
+                            <div class="h3 mb-0 text-warning">{{ report.duplicates }}</div>
+                            <div class="small text-muted">Doublons</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-center">
+                            <div class="h3 mb-0 text-danger">{{ report.errors|length }}</div>
+                            <div class="small text-muted">Erreurs</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if report.detected_columns %}
+        <div class="card lf-stat-card mb-3">
+            <div class="card-header bg-white"><h6 class="mb-0">Colonnes détectées</h6></div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for original, target in report.detected_columns.items() %}
+                    <span class="badge bg-primary-subtle text-primary-emphasis">
+                        {{ original }} → {{ target }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if report.errors %}
+        <div class="card lf-stat-card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Erreurs détectées
+                </h6>
+                <span class="badge bg-danger-subtle text-danger-emphasis">{{ report.errors|length }}</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px;">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Ligne</th><th>Message</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for e in report.errors %}
+                        <tr>
+                            <td class="small text-muted">{{ e.row if e.row else '—' }}</td>
+                            <td class="small">{{ e.message }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="mt-3 d-flex gap-2">
+            <a href="{{ url_for('contacts.list_contacts') }}" class="btn btn-primary">
+                <i class="bi bi-list"></i> Voir les contacts
+            </a>
+            <a href="{{ url_for('contacts.import_contacts') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-repeat"></i> Importer un autre fichier
+            </a>
+        </div>
+
+        {% else %}
+        <div class="card lf-stat-card h-100">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-5">
+                <i class="bi bi-file-earmark-spreadsheet fs-1 text-muted"></i>
+                <h4 class="mt-3">En attente de fichier</h4>
+                <p class="text-muted mb-0">
+                    Sélectionnez un fichier CSV ou Excel et cliquez sur « Importer ».
+                    Un rapport détaillé s'affichera ici.
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

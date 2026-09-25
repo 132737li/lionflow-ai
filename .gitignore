@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+env/
+.venv/
+
+# Environnement (⚠️ NE JAMAIS COMMITER)
+.env
+.env.local
+*.env.bak
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# Migrations locales
+# (décommenter si vous ne voulez pas partager les migrations)
+# migrations/versions/*.py

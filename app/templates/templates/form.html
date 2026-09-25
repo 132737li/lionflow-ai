@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if template else 'Nouveau' }} modèle — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ url_for('templates.list_templates') }}" class="btn btn-link text-decoration-none">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h3 mb-0">
+        {{ 'Modifier le modèle' if template else 'Nouveau modèle' }}
+    </h1>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card lf-stat-card">
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                        {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-select") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.language.label(class="form-label") }}
+                            {{ form.language(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.content.label(class="form-label") }} <span class="text-danger">*</span>
+                        {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""),
+                                        rows=8) }}
+                        {% for e in form.content.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                        <div class="form-text">
+                            Variables disponibles :
+                            <code>{{ '{{prenom}}' }}</code>,
+                            <code>{{ '{{nom}}' }}</code>,
+                            <code>{{ '{{entreprise}}' }}</code>,
+                            <code>{{ '{{telephone}}' }}</code>,
+                            <code>{{ '{{email}}' }}</code>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('templates.list_templates') }}" class="btn btn-light">Annuler</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card lf-stat-card">
+            <div class="card-header bg-white"><h6 class="mb-0"><i class="bi bi-lightning"></i> Modèles pré-remplis</h6></div>
+            <div class="card-body">
+                <p class="small text-muted">Cliquez pour insérer dans le contenu :</p>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-preset="bienvenue">
+                        👋 Bienvenue
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-preset="promotion">
+                        🎁 Promotion
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-preset="rappel">
+                        ⏰ Rappel de rendez-vous
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-preset="confirmation">
+                        ✅ Confirmation de commande
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-preset="anniversaire">
+                        🎂 Anniversaire
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const presets = {
+    bienvenue: "Bonjour {{prenom}},\n\nBienvenue chez {{entreprise}} ! Nous sommes ravis de vous compter parmi nous.\n\nÀ très bientôt !",
+    promotion: "Bonjour {{prenom}},\n\nProfitez de notre offre exclusive -20% valable cette semaine chez {{entreprise}} !\n\nRépondez OUI pour en profiter.",
+    rappel: "Bonjour {{prenom}},\n\nPetit rappel : votre rendez-vous approche. À bientôt chez {{entreprise}} !",
+    confirmation: "Bonjour {{prenom}},\n\nVotre commande a bien été confirmée. Merci pour votre confiance chez {{entreprise}}.",
+    anniversaire: "Joyeux anniversaire {{prenom}} ! 🎉\n\nToute l'équipe {{entreprise}} vous souhaite une merveilleuse journée.",
+};
+document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const key = btn.dataset.preset;
+        const textarea = document.querySelector('textarea[name="content"]');
+        if (textarea && presets[key]) {
+            textarea.value = presets[key];
+            textarea.focus();
+        }
+    });
+});
+</script>
+{% endblock %}

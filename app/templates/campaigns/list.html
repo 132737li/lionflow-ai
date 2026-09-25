@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Campagnes — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-0">Campagnes</h1>
+        <p class="text-muted mb-0">Gérez vos campagnes WhatsApp.</p>
+    </div>
+    <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nouvelle campagne
+    </a>
+</div>
+
+{# Compteurs rapides par statut #}
+<div class="row g-2 mb-3">
+    {% for key, label, color in [
+        ('draft','Brouillon','secondary'),
+        ('scheduled','Programmées','info'),
+        ('running','En cours','primary'),
+        ('paused','En pause','warning'),
+        ('completed','Terminées','success'),
+        ('cancelled','Annulées','danger'),
+    ] %}
+    <div class="col-6 col-md-2">
+        <a href="{{ url_for('campaigns.list_campaigns', status=key) }}"
+           class="card lf-stat-card text-decoration-none h-100 {% if status_filter == key %}border-{{ color }}{% endif %}">
+            <div class="card-body py-2 text-center">
+                <div class="h5 mb-0 text-{{ color }}">{{ status_counts.get(key, 0) }}</div>
+                <div class="small text-muted">{{ label }}</div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card lf-stat-card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label small mb-1">Recherche</label>
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Nom de campagne…">
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <select name="status" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    {% for key in ['draft','scheduled','running','paused','completed','cancelled'] %}
+                    <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ key }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i></button>
+                <a href="{{ url_for('campaigns.list_campaigns') }}" class="btn btn-light"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if campaigns %}
+<div class="card lf-stat-card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Statut</th>
+                    <th>Contacts</th>
+                    <th>Progression</th>
+                    <th>Programmée</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaigns %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}"
+                           class="text-decoration-none fw-semibold">
+                            {{ c.name }}
+                        </a>
+                        {% if c.template %}
+                        <div class="small text-muted"><i class="bi bi-file-text"></i> {{ c.template.name }}</div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge
+                            {% if c.status == 'completed' %}bg-success
+                            {% elif c.status == 'running' %}bg-primary
+                            {% elif c.status == 'scheduled' %}bg-info
+                            {% elif c.status == 'paused' %}bg-warning text-dark
+                            {% elif c.status == 'cancelled' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ c.status }}
+                        </span>
+                    </td>
+                    <td>{{ c.total_contacts }}</td>
+                    <td style="min-width: 160px;">
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar" role="progressbar"
+                                 style="width: {{ c.progress_pct }}%"></div>
+                        </div>
+                        <div class="small text-muted">
+                            {{ c.sent_count }} / {{ c.total_contacts }}
+                            {% if c.failed_count %}· <span class="text-danger">{{ c.failed_count }} échecs</span>{% endif %}
+                        </div>
+                    </td>
+                    <td class="small text-muted">
+                        {% if c.scheduled_at %}
+                            {{ c.scheduled_at.strftime('%d/%m/%Y %H:%M') }} UTC
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}"
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=pagination.prev_num, q=q, status=status_filter) }}">«</a>
+        </li>
+        {% for p in pagination.iter_pages() %}
+            {% if p %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=p, q=q, status=status_filter) }}">{{ p }}</a>
+            </li>
+            {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('campaigns.list_campaigns', page=pagination.next_num, q=q, status=status_filter) }}">»</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card lf-stat-card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-megaphone fs-1 text-muted"></i>
+        <h4 class="mt-3">Aucune campagne</h4>
+        <p class="text-muted">Lancez votre première campagne WhatsApp.</p>
+        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
+            <i class="bi bi-plus-lg"></i> Créer une campagne
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
