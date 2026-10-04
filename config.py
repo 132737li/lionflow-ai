@@ -20,8 +20,8 @@ class Config:
 
     # --- Base de données ---
     SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "mysql+pymysql://lionflow_user:password@localhost:3306/lionflow_ai",
+    "DATABASE_URL",
+    "sqlite:///lionflow_ai.db",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
