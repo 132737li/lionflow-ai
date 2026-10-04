@@ -1,0 +1,120 @@
+{% extends "base.html" %} {% block title %}{{ 'Modifier' if template else
+'Nouveau' }} template — LionFlow AI{% endblock %} {% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a
+    href="{{ url_for('campaign_templates.list_templates') }}"
+    class="btn btn-link text-decoration-none"
+  >
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h1 class="h3 mb-0">
+    {{ 'Modifier le template' if template else 'Nouveau template' }}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <form method="POST" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+      <div class="card lf-stat-card mb-3">
+        <div class="card-body p-4">
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <label class="form-label">Icône (emoji)</label>
+              <input
+                type="text"
+                name="icon"
+                class="form-control text-center"
+                style="font-size: 1.5rem"
+                value="{{ template.icon_or_default if template else '📢' }}"
+                maxlength="5"
+              />
+              <div class="form-text small">🎄 🖤 👋 🛒 🎂 📅 ⭐ ⚡ ✅ 💌</div>
+            </div>
+            <div class="col-md-9 mb-3">
+              <label class="form-label"
+                >Nom du template <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                name="name"
+                class="form-control"
+                required
+                maxlength="150"
+                value="{{ template.name if template else '' }}"
+                placeholder="Ex : Promo été 2026"
+              />
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Catégorie</label>
+            <select name="category" class="form-select">
+              {% for key, label in categories %}
+              <option
+                value="{{ key }}"
+                {%
+                if
+                template
+                and
+                template.category=""
+                ="key"
+                %}selected{%
+                endif
+                %}
+              >
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Description (interne)</label>
+            <input
+              type="text"
+              name="description"
+              class="form-control"
+              maxlength="500"
+              value="{{ template.description if template else '' }}"
+              placeholder="À quoi sert ce template ?"
+            />
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label">Message par défaut</label>
+            <textarea
+              name="default_message"
+              class="form-control"
+              rows="8"
+              placeholder="{% raw %}Bonjour {{prenom}}, voici votre offre spéciale...{% endraw %}"
+            >
+{{ template.default_message if template else '' }}</textarea
+            >
+            <div class="form-text">
+              Variables disponibles :
+              <code>{% raw %}{{prenom}}{% endraw %}</code>,
+              <code>{% raw %}{{nom}}{% endraw %}</code>,
+              <code>{% raw %}{{entreprise}}{% endraw %}</code>,
+              <code>{% raw %}{{telephone}}{% endraw %}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2">
+        <a
+          href="{{ url_for('campaign_templates.list_templates') }}"
+          class="btn btn-light"
+          >Annuler</a
+        >
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-circle"></i> {{ 'Enregistrer' if template else
+          'Créer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

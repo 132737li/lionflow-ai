@@ -1,0 +1,170 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Réglages de la plateforme{% endblock %}
+
+{% block admin_content %}
+
+{# Compteurs globaux #}
+<div class="row g-3 mb-4">
+    {% for label, value in [
+        ('Utilisateurs', stats.users),
+        ('Entreprises', stats.businesses),
+        ('Contacts', stats.contacts),
+        ('Campagnes', stats.campaigns),
+        ('Messages', stats.messages),
+        ('Entrées de logs', stats.logs),
+    ] %}
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ value }}</div>
+                <div class="small text-muted">{{ label }}</div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row g-3">
+    {# Informations système #}
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-cpu"></i> Informations système</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-6">Version Python</dt>
+                    <dd class="col-6"><code>{{ system_info.python_version }}</code></dd>
+
+                    <dt class="col-6">Plateforme</dt>
+                    <dd class="col-6"><code>{{ system_info.platform }}</code></dd>
+
+                    <dt class="col-6">Mode Debug</dt>
+                    <dd class="col-6">
+                        {% if system_info.flask_debug %}
+                        <span class="badge bg-warning text-dark">Activé</span>
+                        {% else %}
+                        <span class="badge bg-success">Désactivé</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-6">Scheduler</dt>
+                    <dd class="col-6">
+                        {% if system_info.scheduler_enabled %}
+                        <span class="badge bg-success">Actif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactif</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-6">Fournisseur paiement</dt>
+                    <dd class="col-6">
+                        <span class="badge bg-info text-dark">
+                            {{ system_info.payment_provider }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-6">WhatsApp mode dev</dt>
+                    <dd class="col-6">
+                        {% if system_info.whatsapp_dev_mode %}
+                        <span class="badge bg-warning text-dark">🧪 Simulation</span>
+                        {% else %}
+                        <span class="badge bg-success">Production</span>
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    {# Plans d'abonnement #}
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-credit-card"></i> Plans d'abonnement</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Plan</th>
+                                <th>Prix</th>
+                                <th>Contacts</th>
+                                <th>Messages/mois</th>
+                                <th>Comptes WABA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for key, plan in plans.items() %}
+                            <tr>
+                                <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ plan.label }}</span></td>
+                                <td class="fw-semibold small">
+                                    {% if plan.price_eur > 0 %}{{ plan.price_eur }}€{% else %}Gratuit{% endif %}
+                                </td>
+                                <td class="small">
+                                    {% if plan.max_contacts > 0 %}{{ plan.max_contacts }}{% else %}∞{% endif %}
+                                </td>
+                                <td class="small">{{ plan.max_messages_month }}</td>
+                                <td class="small">{{ plan.max_whatsapp_accounts }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Note de configuration #}
+<div class="card lf-stat-card mt-4">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-gear"></i> Configuration</h6>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-3">
+            Pour modifier la configuration de la plateforme, éditez le fichier
+            <code>.env</code> à la racine du projet, puis redémarrez Flask.
+        </p>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="border rounded p-3">
+                    <h6 class="small text-uppercase text-muted">Paiement</h6>
+                    <p class="small mb-2">
+                        Pour activer les paiements, configurez :
+                    </p>
+                    <ul class="small mb-0 ps-3">
+                        <li><code>PAYMENT_PROVIDER</code> (ex: <code>generic</code>)</li>
+                        <li><code>PAYMENT_API_URL</code></li>
+                        <li><code>PAYMENT_API_KEY</code></li>
+                        <li><code>PAYMENT_WEBHOOK_SECRET</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="border rounded p-3">
+                    <h6 class="small text-uppercase text-muted">WhatsApp Cloud API</h6>
+                    <p class="small mb-2">
+                        Pour envoyer de vrais messages :
+                    </p>
+                    <ul class="small mb-0 ps-3">
+                        <li>Mettre <code>WHATSAPP_DEV_MODE=0</code></li>
+                        <li>Configurer <code>WHATSAPP_ACCESS_TOKEN</code></li>
+                        <li>Configurer <code>WHATSAPP_PHONE_NUMBER_ID</code></li>
+                        <li>Configurer <code>WHATSAPP_BUSINESS_ACCOUNT_ID</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info small mt-3 mb-0">
+            <i class="bi bi-info-circle"></i>
+            Après modification du fichier <code>.env</code>, un <strong>redémarrage
+            de Flask</strong> est nécessaire pour que les changements soient pris en compte.
+        </div>
+    </div>
+</div>
+{% endblock %}

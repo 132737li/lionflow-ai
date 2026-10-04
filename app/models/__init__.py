@@ -14,6 +14,12 @@ from app.models.payment import Payment
 from app.models.notification import Notification
 from app.models.api_key import ApiKey
 from app.models.log import Log
+from app.models.chatbot_rule import ChatbotRule
+from app.models.chatbot_conversation import ChatbotConversation
+from app.models.push_subscription import PushSubscription
+from app.models.media_file import MediaFile
+from app.models.ai_config import AiConfig
+from app.models.campaign_template import CampaignTemplate
 
 __all__ = [
     "User",
@@ -28,4 +34,12 @@ __all__ = [
     "Notification",
     "ApiKey",
     "Log",
+    "ChatbotRule",
+    "ChatbotConversation",
+    "ChatbotConversation",
+    "PushSubscription",
+    "PushSubscription",
+    "MediaFile",
+    "AiConfig",
+    "CampaignTemplate",
 ]

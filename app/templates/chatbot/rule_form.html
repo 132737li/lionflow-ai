@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifier' if rule else 'Nouvelle' }} règle — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+        <a href="{{ url_for('chatbot.list_rules') }}" class="btn btn-link text-decoration-none">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="h3 mb-0">
+            {{ 'Modifier la règle' if rule else 'Nouvelle règle' }}
+        </h1>
+    </div>
+
+    <div class="row g-3">
+        {# Formulaire #}
+        <div class="col-lg-7">
+            <div class="card lf-stat-card">
+                <div class="card-body p-4">
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""),
+                                         placeholder="Ex : Menu de bienvenue") }}
+                            {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            <div class="form-text">Nom interne, non visible par les clients.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.keywords.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.keywords(class="form-control" + (" is-invalid" if form.keywords.errors else ""),
+                                             placeholder="bonjour, salut, hello, bonsoir") }}
+                            {% for e in form.keywords.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            <div class="form-text">
+                                Séparés par des virgules. Insensible à la casse.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.response.label(class="form-label") }} <span class="text-danger">*</span>
+                            {{ form.response(class="form-control" + (" is-invalid" if form.response.errors else ""),
+                                             rows=6,
+                                             placeholder="Bonjour {{ '{{prenom}}' }}, bienvenue chez {{ '{{entreprise}}' }} ! 👋\n\nComment puis-je vous aider ?") }}
+                            {% for e in form.response.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                            <div class="form-text">
+                                Variables disponibles :
+                                <code>{{ '{{prenom}}' }}</code>,
+                                <code>{{ '{{nom}}' }}</code>,
+                                <code>{{ '{{entreprise}}' }}</code>,
+                                <code>{{ '{{telephone}}' }}</code>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.match_type.label(class="form-label") }}
+                                {{ form.match_type(class="form-select") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.priority.label(class="form-label") }}
+                                {{ form.priority(class="form-control", type="number", min="1", max="100") }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('chatbot.list_rules') }}" class="btn btn-light">Annuler</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# Aide #}
+        <div class="col-lg-5">
+            <div class="card lf-stat-card mb-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb"></i> Exemples de règles</h6>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-2">Cliquez pour insérer un exemple :</p>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-example="menu">
+                            👋 Menu de bienvenue
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-example="horaires">
+                            ⏰ Horaires
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-example="prix">
+                            💰 Prix / Tarifs
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-example="rdv">
+                            📅 Prise de RDV
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm text-start" data-example="agent">
+                            🙋 Parler à un agent
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info small mb-0">
+                <i class="bi bi-info-circle"></i>
+                <strong>Conseil :</strong> créez une règle "Menu de bienvenue" en priorité 1
+                pour répondre automatiquement aux premiers messages.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const examples = {
+    menu: {
+        name: "Menu de bienvenue",
+        keywords: "bonjour, salut, hello, bonsoir, coucou",
+        response: "Bonjour {{'{{prenom}}'}} 👋\n\nBienvenue chez {{'{{entreprise}}'}} !\n\nTapez :\n1️⃣ pour nos horaires\n2️⃣ pour nos tarifs\n3️⃣ pour prendre rendez-vous\n4️⃣ pour parler à un agent",
+        priority: 1,
+        match_type: "contains"
+    },
+    horaires: {
+        name: "Horaires d'ouverture",
+        keywords: "horaire, ouvert, fermé, ouverture",
+        response: "🕐 Nos horaires :\n\nLundi - Vendredi : 8h - 18h\nSamedi : 9h - 15h\nDimanche : Fermé\n\nÀ bientôt chez {{'{{entreprise}}'}} !",
+        priority: 10,
+        match_type: "contains"
+    },
+    prix: {
+        name: "Tarifs et prix",
+        keywords: "prix, tarif, combien, coût",
+        response: "💰 Nos tarifs sont disponibles sur notre site :\n\nwww.exemple.com/tarifs\n\nOu contactez-nous au {{'{{telephone}}'}} pour un devis personnalisé.",
+        priority: 10,
+        match_type: "contains"
+    },
+    rdv: {
+        name: "Prise de rendez-vous",
+        keywords: "rendez-vous, rdv, réserver, appointment",
+        response: "📅 Pour prendre rendez-vous :\n\n1. Appelez-nous au {{'{{telephone}}'}}\n2. Ou envoyez-nous un message avec votre disponibilité.\n\nNous vous confirmerons rapidement !",
+        priority: 10,
+        match_type: "contains"
+    },
+    agent: {
+        name: "Parler à un agent",
+        keywords: "agent, humain, responsable, patron",
+        response: "🙋 Un membre de notre équipe va vous répondre dans quelques minutes.\n\nMerci de votre patience ⏳",
+        priority: 5,
+        match_type: "contains"
+    }
+};
+
+document.querySelectorAll('[data-example]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const key = btn.dataset.example;
+        const data = examples[key];
+        if (!data) return;
+
+        const nameInput = document.querySelector('input[name="name"]');
+        const keywordsInput = document.querySelector('input[name="keywords"]');
+        const responseInput = document.querySelector('textarea[name="response"]');
+        const priorityInput = document.querySelector('input[name="priority"]');
+
+        if (nameInput) nameInput.value = data.name;
+        if (keywordsInput) keywordsInput.value = data.keywords;
+        if (responseInput) responseInput.value = data.response;
+        if (priorityInput) priorityInput.value = data.priority;
+    });
+});
+</script>
+{% endblock %}

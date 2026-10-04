@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Codes de secours — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+            <div class="card lf-stat-card">
+                <div class="card-body p-4">
+
+                    <div class="text-center mb-4">
+                        <div class="lf-stat-icon bg-success-subtle text-success mx-auto mb-3"
+                             style="width: 64px; height: 64px; font-size: 2rem;">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <h2 class="h4">✅ 2FA activée avec succès !</h2>
+                        <p class="text-muted">
+                            Voici vos <strong>codes de secours</strong>. Conservez-les dans un endroit sûr.
+                        </p>
+                    </div>
+
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Important :</strong> ces codes ne seront <strong>plus jamais affichés</strong>.
+                        Copiez-les maintenant et gardez-les en sécurité. Chaque code est utilisable <strong>une seule fois</strong>.
+                    </div>
+
+                    <div class="border rounded p-3 mb-4 bg-light">
+                        <div class="row g-2">
+                            {% for code in codes %}
+                            <div class="col-6">
+                                <code class="d-block text-center fs-6 py-1">{{ code }}</code>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="copyAllCodes()">
+                            <i class="bi bi-clipboard"></i> Copier les codes
+                        </button>
+                        <a href="{{ url_for('auth.profile') }}" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-check-circle"></i> J'ai sauvegardé mes codes
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyAllCodes() {
+    const codes = [{% for c in codes %}"{{ c }}",{% endfor %}].join('\n');
+    navigator.clipboard.writeText(codes).then(() => {
+        alert('Codes copiés dans le presse-papiers.');
+    });
+}
+</script>
+{% endblock %}

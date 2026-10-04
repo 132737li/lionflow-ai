@@ -1,0 +1,115 @@
+{% extends "base.html" %} {% block title %}Conversation — LionFlow AI{% endblock
+%} {% block content %}
+<div
+  class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+>
+  <div>
+    <a
+      href="{{ url_for('chatbot.list_conversations') }}"
+      class="text-decoration-none small"
+    >
+      <i class="bi bi-arrow-left"></i> Retour aux conversations
+    </a>
+    <h1 class="h3 mb-0 mt-2">💬 Conversation #{{ conversation.id }}</h1>
+    <p class="text-muted mb-0">
+      {{ conversation.contact.full_name if conversation.contact else "Contact
+      inconnu" }} {% if conversation.contact and conversation.contact.phone %} ·
+      {{ conversation.contact.phone }} {% endif %}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if conversation.status == "waiting" %}
+    <form
+      method="POST"
+      action="{{ url_for('chatbot.take_over_conversation', conv_id=conversation.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-primary">
+        <i class="bi bi-hand-index"></i> Prendre la main
+      </button>
+    </form>
+    {% endif %} {% if conversation.status != "closed" %}
+    <form
+      method="POST"
+      action="{{ url_for('chatbot.close_conversation', conv_id=conversation.id) }}"
+      data-confirm="Fermer cette conversation ?"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-outline-secondary">
+        <i class="bi bi-x-circle"></i> Fermer
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card lf-stat-card">
+      <div class="card-header bg-white"><h6 class="mb-0">Informations</h6></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">Statut</dt>
+          <dd class="col-7">
+            <span
+              class="badge {% if conversation.status == 'active' %}bg-primary {% elif conversation.status == 'waiting' %}bg-warning text-dark {% elif conversation.status == 'human' %}bg-info text-dark {% else %}bg-secondary{% endif %}"
+            >
+              {{ conversation.status }}
+            </span>
+          </dd>
+
+          <dt class="col-5">Escaladé</dt>
+          <dd class="col-7">
+            {{ "Oui ⚠️" if conversation.escalated else "Non" }}
+          </dd>
+
+          <dt class="col-5">Réponses auto</dt>
+          <dd class="col-7">{{ conversation.auto_replies_count }}</dd>
+
+          <dt class="col-5">Créée le</dt>
+          <dd class="col-7">
+            {{ conversation.created_at.strftime('%d/%m/%Y %H:%M') if
+            conversation.created_at else "—" }}
+          </dd>
+
+          {% if conversation.closed_at %}
+          <dt class="col-5">Fermée le</dt>
+          <dd class="col-7">
+            {{ conversation.closed_at.strftime('%d/%m/%Y %H:%M') }}
+          </dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card lf-stat-card">
+      <div class="card-header bg-white">
+        <h6 class="mb-0">Message déclencheur</h6>
+      </div>
+      <div class="card-body">
+        {% if conversation.trigger_message %}
+        <div
+          class="border-start border-3 border-primary ps-3"
+          style="white-space: pre-wrap"
+        >
+          {{ conversation.trigger_message }}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">Aucun message.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if conversation.notes %}
+    <div class="card lf-stat-card mt-3">
+      <div class="card-header bg-white"><h6 class="mb-0">Notes</h6></div>
+      <div class="card-body">
+        <div style="white-space: pre-wrap">{{ conversation.notes }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

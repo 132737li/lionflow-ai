@@ -1,31 +1,7 @@
-"""Routes campagnes — stub (à compléter en PARTIE 6)."""
-from flask import Blueprint, render_template
-from flask_login import login_required
-
-
-campaigns_bp = Blueprint("campaigns", __name__, template_folder="../templates/campaigns")
-
-
-@campaigns_bp.route("/")
-@login_required
-def list_campaigns():
-    return render_template("_placeholder.html", title="Campagnes", icon="megaphone")
-
-
-@campaigns_bp.route("/new")
-@login_required
-def create_campaign():
-    return render_template("_placeholder.html", title="Nouvelle campagne", icon="plus-circle")
-
-
-@campaigns_bp.route("/<int:campaign_id>")
-@login_required
-def detail_campaign(campaign_id):
-    return render_template("_placeholder.html", title=f"Campagne #{campaign_id}", icon="megaphone")
-
 """
 CRUD campagnes + actions (démarrer, pause, reprendre, annuler).
 Multi-tenant : filtré par business_id.
+Supporte les médias (image, PDF, vidéo).
 """
 from datetime import datetime, timezone
 from flask import (
@@ -39,6 +15,7 @@ from app.models.campaign import Campaign, campaign_contacts
 from app.models.template import Template
 from app.models.whatsapp_account import WhatsAppAccount
 from app.models.contact import Contact
+from app.models.media_file import MediaFile
 from app.services.campaign_service import CampaignService
 from app.utils.decorators import require_business, get_current_business
 from app.utils.security import log_activity
@@ -52,20 +29,42 @@ campaigns_bp = Blueprint("campaigns", __name__, template_folder="../templates/ca
 # HELPERS POUR LE FORMULAIRE
 # ==================================================
 def _populate_choices(form, business, selected_contacts_ids=None):
-    """Remplit les choix de template, waba, contacts."""
+    """Remplit les choix de template, waba, média et contacts."""
     # Templates
-    templates = Template.query.filter_by(business_id=business.id).order_by(Template.name).all()
+    templates = (
+        Template.query
+        .filter_by(business_id=business.id)
+        .order_by(Template.name)
+        .all()
+    )
     form.template_id.choices = [(0, "— Aucun (utiliser le message personnalisé) —")] + [
         (t.id, t.name) for t in templates
     ]
 
     # Comptes WhatsApp
-    wabas = WhatsAppAccount.query.filter_by(business_id=business.id).order_by(WhatsAppAccount.name).all()
+    wabas = (
+        WhatsAppAccount.query
+        .filter_by(business_id=business.id)
+        .order_by(WhatsAppAccount.name)
+        .all()
+    )
     form.whatsapp_account_id.choices = [(0, "— Aucun —")] + [
         (w.id, f"{w.name} ({w.phone_number})") for w in wabas
     ]
 
-    # Contacts (limite à 500 pour ne pas exploser l'UI — recherche possible via API)
+    # 📎 Médias
+    medias = (
+        MediaFile.query
+        .filter_by(business_id=business.id)
+        .order_by(MediaFile.created_at.desc())
+        .all()
+    )
+    form.media_file_id.choices = [(0, "— Aucun média —")] + [
+        (m.id, f"[{m.media_type.upper()}] {m.original_name} ({m.size_human})")
+        for m in medias
+    ]
+
+    # Contacts (limite à 500 pour ne pas exploser l'UI)
     contacts = (
         Contact.query
         .filter_by(business_id=business.id, status="active")
@@ -77,7 +76,10 @@ def _populate_choices(form, business, selected_contacts_ids=None):
         (c.id, f"{c.full_name} — {c.phone}") for c in contacts
     ]
     if selected_contacts_ids:
-        form.contact_ids.data = [int(i) for i in selected_contacts_ids if int(i) in {c.id for c in contacts}]
+        valid_ids = {c.id for c in contacts}
+        form.contact_ids.data = [
+            int(i) for i in selected_contacts_ids if int(i) in valid_ids
+        ]
 
 
 # ==================================================
@@ -160,6 +162,14 @@ def create_campaign():
                 id=template_id, business_id=business.id
             ).first()
 
+        # 📎 Média (optionnel)
+        media_id = form.media_file_id.data or 0
+        media = None
+        if media_id:
+            media = MediaFile.query.filter_by(
+                id=media_id, business_id=business.id
+            ).first()
+
         # Programmation
         scheduled_at_utc = None
         if form.scheduled_at.data:
@@ -179,6 +189,7 @@ def create_campaign():
             business_id=business.id,
             template_id=template.id if template else None,
             whatsapp_account_id=waba.id,
+            media_file_id=media.id if media else None,
             name=form.name.data.strip(),
             message=(form.message.data or "").strip() or None,
             status=status,
@@ -258,6 +269,7 @@ def edit_campaign(campaign_id: int):
         flash("Cette campagne ne peut plus être modifiée.", "warning")
         return redirect(url_for("campaigns.detail_campaign", campaign_id=campaign.id))
 
+    # Récupérer les IDs contacts actuels
     current_contact_ids = [
         row[0] for row in
         db.session.query(campaign_contacts.c.contact_id)
@@ -271,6 +283,7 @@ def edit_campaign(campaign_id: int):
     if request.method == "GET":
         form.template_id.data = campaign.template_id or 0
         form.whatsapp_account_id.data = campaign.whatsapp_account_id or 0
+        form.media_file_id.data = campaign.media_file_id or 0
 
     if form.validate_on_submit():
         waba_id = form.whatsapp_account_id.data or 0
@@ -290,6 +303,14 @@ def edit_campaign(campaign_id: int):
                 id=template_id, business_id=business.id
             ).first()
 
+        # 📎 Média (optionnel)
+        media_id = form.media_file_id.data or 0
+        media = None
+        if media_id:
+            media = MediaFile.query.filter_by(
+                id=media_id, business_id=business.id
+            ).first()
+
         scheduled_at_utc = None
         if form.scheduled_at.data:
             scheduled_at_utc = to_utc(form.scheduled_at.data, form.timezone.data)
@@ -303,6 +324,7 @@ def edit_campaign(campaign_id: int):
         # Mise à jour
         campaign.template_id = template.id if template else None
         campaign.whatsapp_account_id = waba.id
+        campaign.media_file_id = media.id if media else None
         campaign.name = form.name.data.strip()
         campaign.message = (form.message.data or "").strip() or None
         campaign.timezone = form.timezone.data

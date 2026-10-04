@@ -1,382 +1,628 @@
-{% extends "base.html" %}
-{% block title %}Tableau de bord — LionFlow AI{% endblock %}
+{% extends "base.html" %} {% block title %}{{ t('dashboard.title') }} — LionFlow
+AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
+<div
+  class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+>
+  <div>
+    <h1 class="h3 mb-0">{{ t('dashboard.title') }}</h1>
+    <p class="text-muted mb-0">
+      <i class="bi bi-building"></i> {{ business.name }}
+      <span class="badge bg-primary-subtle text-primary-emphasis ms-2">
+        {{ plan_config.label }}
+      </span>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a
+      href="{{ url_for('contacts.create_contact') }}"
+      class="btn btn-outline-primary"
+    >
+      <i class="bi bi-person-plus"></i> {{ t('dashboard.new_contact') }}
+    </a>
+    <a
+      href="{{ url_for('campaigns.create_campaign') }}"
+      class="btn btn-primary"
+    >
+      <i class="bi bi-megaphone"></i> {{ t('dashboard.new_campaign') }}
+    </a>
+  </div>
+</div>
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <div>
-        <h1 class="h3 mb-0">Tableau de bord</h1>
-        <p class="text-muted mb-0">
-            <i class="bi bi-building"></i> {{ business.name }}
-            <span class="badge bg-primary-subtle text-primary-emphasis ms-2">
-                Plan {{ plan_config.label }}
+{# ============ INSIGHTS INTELLIGENTS ============ #} {% if insights %}
+<div class="row g-2 mb-4">
+  {% for insight in insights[:3] %}
+  <div class="col-md-6 col-lg-4">
+    <div
+      class="card lf-stat-card h-100 border-start border-4 {% if insight.type == 'success' %}border-success {% elif insight.type == 'warning' %}border-warning {% elif insight.type == 'error' %}border-danger {% else %}border-info{% endif %}"
+    >
+      <div class="card-body d-flex align-items-start gap-3 py-3">
+        <div
+          class="lf-stat-icon flex-shrink-0 bg-{{ insight.type }}-subtle text-{{ insight.type if insight.type != 'info' else 'info' }}"
+          style="width: 40px; height: 40px; font-size: 1.1rem"
+        >
+          <i class="bi {{ insight.icon }}"></i>
+        </div>
+        <div class="flex-grow-1 small">
+          <div class="fw-semibold">{{ insight.title }}</div>
+          <div class="text-muted">{{ insight.message|safe }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {# ============ CARTES STATS AVEC COMPARAISON ============ #}
+<div class="row g-3 mb-4">
+  {# Contacts #}
+  <div class="col-6 col-lg-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="lf-stat-icon bg-primary-subtle text-primary">
+            <i class="bi bi-people"></i>
+          </div>
+          {% if comparison.contacts.change_pct != 0 %}
+          <span
+            class="small fw-semibold {% if comparison.contacts.direction == 'up' %}text-success {% else %}text-danger{% endif %}"
+          >
+            <i class="bi bi-arrow-{{ comparison.contacts.direction }}"></i>
+            {{ comparison.contacts.change_pct }}%
+          </span>
+          {% endif %}
+        </div>
+        <div class="text-muted small">{{ t('dashboard.contacts') }}</div>
+        <div class="h3 mb-0">{{ stats.contacts_total }}</div>
+        {% if comparison.contacts.previous > 0 %}
+        <div class="small text-muted mt-1">
+          vs {{ comparison.contacts.previous }} mois dernier
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Campagnes #}
+  <div class="col-6 col-lg-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="lf-stat-icon bg-info-subtle text-info">
+            <i class="bi bi-megaphone"></i>
+          </div>
+        </div>
+        <div class="text-muted small">{{ t('dashboard.campaigns') }}</div>
+        <div class="h3 mb-0">{{ stats.campaigns_total }}</div>
+        <div class="small text-muted mt-1">
+          {{ stats.messages_total }} messages au total
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Messages envoyés #}
+  <div class="col-6 col-lg-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="lf-stat-icon bg-success-subtle text-success">
+            <i class="bi bi-send-check"></i>
+          </div>
+          {% if comparison.messages_sent.change_pct != 0 %}
+          <span
+            class="small fw-semibold {% if comparison.messages_sent.direction == 'up' %}text-success {% else %}text-danger{% endif %}"
+          >
+            <i class="bi bi-arrow-{{ comparison.messages_sent.direction }}"></i>
+            {{ comparison.messages_sent.change_pct }}%
+          </span>
+          {% endif %}
+        </div>
+        <div class="text-muted small">{{ t('dashboard.messages_sent') }}</div>
+        <div class="h3 mb-0">
+          {{ stats.messages_sent + stats.messages_delivered +
+          stats.messages_read }}
+        </div>
+        <div class="small text-muted mt-1">
+          {{ comparison.messages_sent.current }} ce mois
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Taux de lecture #}
+  <div class="col-6 col-lg-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="lf-stat-icon bg-warning-subtle text-warning">
+            <i class="bi bi-envelope-open"></i>
+          </div>
+          {% if read_rate >= 50 %}
+          <i class="bi bi-trophy-fill text-warning"></i>
+          {% endif %}
+        </div>
+        <div class="text-muted small">Taux de lecture</div>
+        <div class="h3 mb-0">{{ read_rate }}%</div>
+        <div class="small text-muted mt-1">
+          {{ stats.messages_read }} messages lus
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ RANGÉE TAUX DÉTAILLÉS ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small mb-1">
+          <i class="bi bi-check2-circle"></i> Délivrabilité
+        </div>
+        <div class="h4 mb-0">{{ delivery_rate }}%</div>
+        <div class="progress mt-2" style="height: 5px">
+          <div
+            class="progress-bar bg-info"
+            style="width: {{ delivery_rate }}%"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small mb-1">
+          <i class="bi bi-envelope-open"></i> Lecture
+        </div>
+        <div class="h4 mb-0">{{ read_rate }}%</div>
+        <div class="progress mt-2" style="height: 5px">
+          <div
+            class="progress-bar bg-success"
+            style="width: {{ read_rate }}%"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small mb-1">
+          <i class="bi bi-x-octagon"></i> Échecs
+        </div>
+        <div class="h4 mb-0">{{ failure_rate }}%</div>
+        <div class="progress mt-2" style="height: 5px">
+          <div
+            class="progress-bar bg-danger"
+            style="width: {{ failure_rate }}%"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card lf-stat-card h-100">
+      <div class="card-body text-center py-3">
+        <div class="text-muted small mb-1">
+          <i class="bi bi-hourglass-split"></i> En attente
+        </div>
+        <div class="h4 mb-0">{{ stats.messages_pending }}</div>
+        <div class="progress mt-2" style="height: 5px">
+          <div class="progress-bar bg-secondary" style="width: 10%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ GRAPHIQUES PRINCIPAUX ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="card lf-stat-card h-100">
+      <div
+        class="card-header bg-white d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">Messages (30 derniers jours)</h5>
+        <span class="badge bg-success-subtle text-success-emphasis">
+          <i class="bi bi-clock"></i> Temps réel
+        </span>
+      </div>
+      <div class="card-body">
+        <canvas id="chartMessagesPerDay" height="90"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Répartition des statuts</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartMessagesByStatus" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ HEURES D'ENVOI + TOP CONTACTS ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card lf-stat-card h-100">
+      <div
+        class="card-header bg-white d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">
+          <i class="bi bi-clock-history"></i> Distribution par heure
+        </h5>
+        {% if msgs_per_hour.best_hour is not none and
+        msgs_per_hour.best_hour_count > 0 %}
+        <span class="badge bg-primary">
+          Meilleure : {{ '%02d'|format(msgs_per_hour.best_hour) }}h
+        </span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <canvas id="chartMessagesPerHour" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="bi bi-trophy"></i> Top contacts</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if top_contacts %}
+        <ul class="list-group list-group-flush">
+          {% for c in top_contacts %}
+          <li class="list-group-item d-flex align-items-center gap-3">
+            <div
+              class="lf-stat-icon bg-primary-subtle text-primary"
+              style="
+                width: 36px;
+                height: 36px;
+                font-size: 0.9rem;
+                font-weight: 600;
+              "
+            >
+              {{ c.full_name[:1]|upper }}
+            </div>
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold small text-truncate">
+                {{ c.full_name }}
+              </div>
+              <div class="text-muted small">
+                {{ c.total_messages }} messages
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="small fw-semibold text-success">
+                {{ c.read_rate }}%
+              </div>
+              <div class="text-muted" style="font-size: 0.7rem">lus</div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 text-center text-muted small">
+          Aucune donnée d'engagement pour le moment.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ ÉVOLUTION DES CONTACTS ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card lf-stat-card">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">Évolution des contacts (12 dernières semaines)</h5>
+      </div>
+      <div class="card-body">
+        <canvas id="chartContactsEvolution" height="70"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ============ ACTIVITÉ + CAMPAGNES + MESSAGES ============ #}
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white">
+        <h5 class="mb-0">
+          <i class="bi bi-clock-history"></i> {{ t('dashboard.recent_activity')
+          }}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_activity %}
+        <ul class="list-group list-group-flush">
+          {% for log in recent_activity %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-start py-2"
+          >
+            <div class="flex-grow-1 min-width-0">
+              <div class="small fw-semibold">{{ log.action }}</div>
+              <div class="text-muted small text-truncate">
+                {{ log.description or '' }}
+              </div>
+            </div>
+            <div class="text-muted small ms-2 text-nowrap">
+              {{ log.created_at[11:16] if log.created_at else '' }}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 text-center text-muted small">
+          Aucune activité récente.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div
+        class="card-header bg-white d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">
+          <i class="bi bi-megaphone"></i> {{ t('dashboard.recent_campaigns') }}
+        </h5>
+        <a
+          href="{{ url_for('campaigns.list_campaigns') }}"
+          class="small text-decoration-none"
+          >Voir tout</a
+        >
+      </div>
+      <div class="card-body p-0">
+        {% if recent_campaigns %}
+        <ul class="list-group list-group-flush">
+          {% for c in recent_campaigns %}
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center"
+          >
+            <div class="text-truncate" style="max-width: 65%">
+              <a
+                href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}"
+                class="text-decoration-none fw-semibold small"
+                >{{ c.name }}</a
+              >
+            </div>
+            <span
+              class="badge {% if c.status == 'completed' %}bg-success {% elif c.status == 'running' %}bg-primary {% elif c.status == 'scheduled' %}bg-info {% elif c.status == 'paused' %}bg-warning {% elif c.status == 'cancelled' %}bg-danger {% else %}bg-secondary{% endif %}"
+            >
+              {{ c.status }}
             </span>
-        </p>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 text-center text-muted small">Aucune campagne.</div>
+        {% endif %}
+      </div>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{{ url_for('contacts.create_contact') }}" class="btn btn-outline-primary">
-            <i class="bi bi-person-plus"></i> Nouveau contact
-        </a>
-        <a href="{{ url_for('campaigns.create_campaign') }}" class="btn btn-primary">
-            <i class="bi bi-megaphone"></i> Nouvelle campagne
-        </a>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div
+        class="card-header bg-white d-flex justify-content-between align-items-center"
+      >
+        <h5 class="mb-0">
+          <i class="bi bi-envelope"></i> {{ t('dashboard.recent_messages') }}
+        </h5>
+        <a
+          href="{{ url_for('messages.list_messages') }}"
+          class="small text-decoration-none"
+          >Voir tout</a
+        >
+      </div>
+      <div class="card-body p-0">
+        {% if recent_messages %}
+        <ul class="list-group list-group-flush">
+          {% for m in recent_messages %}
+          <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="text-truncate" style="max-width: 70%">
+                <div class="fw-semibold small">{{ m.contact_name }}</div>
+                <div class="text-muted small text-truncate">
+                  {{ m.content[:50] if m.content else '' }}
+                </div>
+              </div>
+              <span
+                class="badge {% if m.status == 'read' %}bg-success {% elif m.status == 'delivered' %}bg-info {% elif m.status == 'sent' %}bg-primary {% elif m.status == 'failed' %}bg-danger {% else %}bg-secondary{% endif %}"
+              >
+                {{ m.status }}
+              </span>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 text-center text-muted small">Aucun message.</div>
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
 
-{# ===== Cartes statistiques ===== #}
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-primary-subtle text-primary">
-                    <i class="bi bi-people"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Contacts</div>
-                    <div class="h4 mb-0">{{ stats.contacts_total }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-info-subtle text-info">
-                    <i class="bi bi-megaphone"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Campagnes</div>
-                    <div class="h4 mb-0">{{ stats.campaigns_total }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-success-subtle text-success">
-                    <i class="bi bi-send-check"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Messages envoyés</div>
-                    <div class="h4 mb-0">{{ stats.messages_sent + stats.messages_delivered + stats.messages_read }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-warning-subtle text-warning">
-                    <i class="bi bi-graph-up"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Taux de délivrabilité</div>
-                    <div class="h4 mb-0">{{ delivery_rate }}%</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-info-subtle text-info">
-                    <i class="bi bi-check2-circle"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Délivrés</div>
-                    <div class="h4 mb-0">{{ stats.messages_delivered + stats.messages_read }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-secondary-subtle text-secondary">
-                    <i class="bi bi-envelope-open"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Lus</div>
-                    <div class="h4 mb-0">{{ stats.messages_read }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-danger-subtle text-danger">
-                    <i class="bi bi-x-octagon"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Échoués</div>
-                    <div class="h4 mb-0">{{ stats.messages_failed }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-lg-3">
-        <div class="card lf-stat-card h-100">
-            <div class="card-body d-flex align-items-center gap-3">
-                <div class="lf-stat-icon bg-primary-subtle text-primary">
-                    <i class="bi bi-credit-card"></i>
-                </div>
-                <div>
-                    <div class="text-muted small">Abonnement</div>
-                    <div class="h5 mb-0">{{ plan_config.label }}</div>
-                    {% if subscription and subscription.days_remaining is not none %}
-                    <div class="small text-muted">
-                        {{ subscription.days_remaining }} j restants
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{# ===== Graphiques ===== #}
-<div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card lf-stat-card h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Messages (30 derniers jours)</h5>
-                <span class="badge bg-success-subtle text-success-emphasis">Temps réel</span>
-            </div>
-            <div class="card-body">
-                <canvas id="chartMessagesPerDay" height="90"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card lf-stat-card h-100">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Répartition des statuts</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartMessagesByStatus" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-12">
-        <div class="card lf-stat-card">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">Évolution des contacts (12 dernières semaines)</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="chartContactsEvolution" height="70"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-{# ===== Activité récente + dernières campagnes + derniers messages ===== #}
-<div class="row g-3">
-    <div class="col-lg-4">
-        <div class="card lf-stat-card h-100">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Activité récente</h5>
-            </div>
-            <div class="card-body p-0">
-                {% if recent_activity %}
-                <ul class="list-group list-group-flush">
-                    {% for log in recent_activity %}
-                    <li class="list-group-item d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="small fw-semibold">{{ log.action }}</div>
-                            <div class="text-muted small">{{ log.description or '' }}</div>
-                        </div>
-                        <div class="text-muted small ms-2">
-                            {{ log.created_at[11:16] if log.created_at else '' }}
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="p-4 text-center text-muted small">Aucune activité récente.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card lf-stat-card h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-megaphone"></i> Dernières campagnes</h5>
-                <a href="{{ url_for('campaigns.list_campaigns') }}" class="small text-decoration-none">Voir tout</a>
-            </div>
-            <div class="card-body p-0">
-                {% if recent_campaigns %}
-                <ul class="list-group list-group-flush">
-                    {% for c in recent_campaigns %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div class="text-truncate" style="max-width: 60%;">
-                            <a href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}"
-                               class="text-decoration-none fw-semibold">{{ c.name }}</a>
-                        </div>
-                        <span class="badge
-                            {% if c.status == 'completed' %}bg-success
-                            {% elif c.status == 'running' %}bg-primary
-                            {% elif c.status == 'scheduled' %}bg-info
-                            {% elif c.status == 'paused' %}bg-warning
-                            {% elif c.status == 'cancelled' %}bg-danger
-                            {% else %}bg-secondary{% endif %}">
-                            {{ c.status }}
-                        </span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="p-4 text-center text-muted small">Aucune campagne.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card lf-stat-card h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-envelope"></i> Derniers messages</h5>
-                <a href="{{ url_for('messages.list_messages') }}" class="small text-decoration-none">Voir tout</a>
-            </div>
-            <div class="card-body p-0">
-                {% if recent_messages %}
-                <ul class="list-group list-group-flush">
-                    {% for m in recent_messages %}
-                    <li class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div class="text-truncate" style="max-width: 70%;">
-                                <div class="fw-semibold small">{{ m.contact_name }}</div>
-                                <div class="text-muted small text-truncate">
-                                    {{ m.content[:60] if m.content else '' }}{% if m.content and m.content|length > 60 %}…{% endif %}
-                                </div>
-                            </div>
-                            <span class="badge
-                                {% if m.status == 'read' %}bg-success
-                                {% elif m.status == 'delivered' %}bg-info
-                                {% elif m.status == 'sent' %}bg-primary
-                                {% elif m.status == 'failed' %}bg-danger
-                                {% else %}bg-secondary{% endif %}">
-                                {{ m.status }}
-                            </span>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="p-4 text-center text-muted small">Aucun message.</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-{% if notifications %}
+{# ============ NOTIFICATIONS ============ #} {% if notifications %}
 <div class="mt-4">
-    <h5 class="mb-3"><i class="bi bi-bell"></i> Notifications récentes</h5>
-    <div class="row g-2">
-        {% for n in notifications %}
-        <div class="col-md-6">
-            <div class="alert alert-{{ n.type }} mb-0 d-flex align-items-center">
-                <i class="bi bi-info-circle me-2"></i>
-                <div class="flex-grow-1">
-                    <div class="fw-semibold small">{{ n.title }}</div>
-                    <div class="small">{{ n.message or '' }}</div>
-                </div>
-            </div>
+  <h5 class="mb-3"><i class="bi bi-bell"></i> {{ t('nav.notifications') }}</h5>
+  <div class="row g-2">
+    {% for n in notifications %}
+    <div class="col-md-6">
+      <div class="alert alert-{{ n.type }} mb-0 d-flex align-items-center">
+        <i class="bi bi-info-circle me-2"></i>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">{{ n.title }}</div>
+          <div class="small">{{ n.message or '' }}</div>
         </div>
-        {% endfor %}
+      </div>
     </div>
+    {% endfor %}
+  </div>
 </div>
-{% endif %}
-
-{% endblock %}
-
-
-{% block scripts %}
+{% endif %} {% endblock %} {% block scripts %}
 <script>
-// ===== Données injectées depuis Flask =====
-const MSGS_PER_DAY = {{ msgs_day|tojson }};
-const MSGS_BY_STATUS = {{ msgs_status|tojson }};
-const CONTACTS_EVO = {{ contacts_evo|tojson }};
+  // ============================================
+  // DONNÉES INJECTÉES
+  // ============================================
+  const MSGS_PER_DAY = {{ msgs_day|tojson }};
+  const MSGS_BY_STATUS = {{ msgs_status|tojson }};
+  const CONTACTS_EVO = {{ contacts_evo|tojson }};
+  const MSGS_PER_HOUR = {{ msgs_per_hour|tojson }};
 
-// ===== Graphique : messages par jour =====
-new Chart(document.getElementById('chartMessagesPerDay'), {
-    type: 'line',
-    data: {
-        labels: MSGS_PER_DAY.labels,
-        datasets: [
-            {
-                label: 'Envoyés',
-                data: MSGS_PER_DAY.sent,
-                borderColor: '#f59e0b',
-                backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                fill: true,
-                tension: 0.35,
-            },
-            {
-                label: 'Échoués',
-                data: MSGS_PER_DAY.failed,
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                fill: true,
-                tension: 0.35,
-            },
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-});
+  // ============================================
+  // GRAPHIQUE — Messages par jour
+  // ============================================
+  new Chart(document.getElementById('chartMessagesPerDay'), {
+      type: 'line',
+      data: {
+          labels: MSGS_PER_DAY.labels,
+          datasets: [
+              {
+                  label: 'Envoyés',
+                  data: MSGS_PER_DAY.sent,
+                  borderColor: '#10b981',
+                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                  pointHoverRadius: 5,
+              },
+              {
+                  label: 'Lus',
+                  data: MSGS_PER_DAY.read,
+                  borderColor: '#0ea5e9',
+                  backgroundColor: 'rgba(14, 165, 233, 0.05)',
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                  pointHoverRadius: 5,
+              },
+              {
+                  label: 'Échoués',
+                  data: MSGS_PER_DAY.failed,
+                  borderColor: '#ef4444',
+                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                  pointHoverRadius: 5,
+              },
+          ]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
+          },
+          scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } },
+          },
+      }
+  });
 
-// ===== Graphique : statuts =====
-new Chart(document.getElementById('chartMessagesByStatus'), {
-    type: 'doughnut',
-    data: {
-        labels: MSGS_BY_STATUS.labels,
-        datasets: [{
-            data: MSGS_BY_STATUS.values,
-            backgroundColor: ['#94a3b8', '#3b82f6', '#0ea5e9', '#10b981', '#ef4444'],
-            borderWidth: 0,
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } }
-    }
-});
+  // ============================================
+  // GRAPHIQUE — Statuts
+  // ============================================
+  new Chart(document.getElementById('chartMessagesByStatus'), {
+      type: 'doughnut',
+      data: {
+          labels: MSGS_BY_STATUS.labels,
+          datasets: [{
+              data: MSGS_BY_STATUS.values,
+              backgroundColor: ['#94a3b8', '#3b82f6', '#0ea5e9', '#10b981', '#ef4444'],
+              borderWidth: 0,
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+          },
+      }
+  });
 
-// ===== Graphique : contacts =====
-new Chart(document.getElementById('chartContactsEvolution'), {
-    type: 'bar',
-    data: {
-        labels: CONTACTS_EVO.labels,
-        datasets: [{
-            label: 'Contacts (cumul)',
-            data: CONTACTS_EVO.values,
-            backgroundColor: 'rgba(245, 158, 11, 0.7)',
-            borderRadius: 6,
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-});
+  // ============================================
+  // GRAPHIQUE — Contacts
+  // ============================================
+  new Chart(document.getElementById('chartContactsEvolution'), {
+      type: 'bar',
+      data: {
+          labels: CONTACTS_EVO.labels,
+          datasets: [{
+              label: 'Contacts (cumul)',
+              data: CONTACTS_EVO.values,
+              backgroundColor: 'rgba(245, 158, 11, 0.7)',
+              borderRadius: 6,
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: { grid: { display: false } },
+          },
+      }
+  });
+
+  // ============================================
+  // GRAPHIQUE — Distribution par heure
+  // ============================================
+  const hourLabels = MSGS_PER_HOUR.labels;
+  const hourValues = MSGS_PER_HOUR.values;
+  const bestHour = MSGS_PER_HOUR.best_hour;
+
+  const hourColors = hourLabels.map((_, i) =>
+      i === bestHour ? '#f59e0b' : 'rgba(16, 185, 129, 0.6)'
+  );
+
+  new Chart(document.getElementById('chartMessagesPerHour'), {
+      type: 'bar',
+      data: {
+          labels: hourLabels,
+          datasets: [{
+              label: 'Messages envoyés',
+              data: hourValues,
+              backgroundColor: hourColors,
+              borderRadius: 4,
+          }]
+      },
+      options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+              legend: { display: false },
+              tooltip: {
+                  callbacks: {
+                      label: (ctx) => `${ctx.parsed.y} message(s)`
+                  }
+              }
+          },
+          scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
+              x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
+              },
+          },
+      }
+  });
 </script>
 {% endblock %}

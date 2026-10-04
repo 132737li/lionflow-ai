@@ -7,7 +7,7 @@ from app.extensions import db
 
 
 def _utcnow():
-    """Heure UTC naïve (compatible MySQL DATETIME)."""
+    """Heure UTC naïve."""
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
@@ -25,9 +25,9 @@ class Payment(db.Model):
         db.Integer,
         db.ForeignKey("subscriptions.id", ondelete="SET NULL"),
     )
-    provider = db.Column(db.String(50), default="stripe")
+    provider = db.Column(db.String(50), default="generic")
     amount_cents = db.Column(db.Integer, nullable=False, default=0)
-    currency = db.Column(db.String(10), default="EUR")
+    currency = db.Column(db.String(10), default="BIF")
     status = db.Column(
         db.Enum(
             "pending", "succeeded", "failed", "refunded",
@@ -38,7 +38,8 @@ class Payment(db.Model):
         index=True,
     )
     external_id = db.Column(db.String(120), index=True)
-    payload = db.Column(db.Text)
+    payment_url = db.Column(db.String(500))       # URL de paiement du provider
+    provider_response = db.Column(db.Text)         # Réponse brute du provider
 
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)

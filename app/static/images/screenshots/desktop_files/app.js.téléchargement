@@ -1,0 +1,124 @@
+/* ==========================================
+   LionFlow AI — JavaScript principal
+   ========================================== */
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ============================================
+    // SIDEBAR MOBILE — Toggle + Fermeture au clic extérieur
+    // ============================================
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const pageContent = document.getElementById('page-content-wrapper');
+
+    if (toggle && sidebar) {
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('show');
+        });
+
+        if (pageContent) {
+            pageContent.addEventListener('click', () => {
+                if (sidebar.classList.contains('show') && window.innerWidth < 992) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (
+                sidebar.classList.contains('show') &&
+                !sidebar.contains(e.target) &&
+                !toggle.contains(e.target) &&
+                window.innerWidth < 992
+            ) {
+                sidebar.classList.remove('show');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        });
+
+        sidebar.querySelectorAll('.lf-nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 992) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        });
+    }
+
+    // ============================================
+    // TABLES RESPONSIVE — Ajoute data-label automatiquement
+    // ============================================
+    function transformTablesForMobile() {
+        const isMobile = window.innerWidth < 768;
+        
+        document.querySelectorAll('.table-responsive table').forEach(table => {
+            // Récupérer les en-têtes
+            const headers = [];
+            table.querySelectorAll('thead th').forEach(th => {
+                headers.push(th.textContent.trim());
+            });
+            
+            if (headers.length === 0) return;
+            
+            // Pour chaque ligne, ajouter data-label aux <td>
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                tr.querySelectorAll('td').forEach((td, index) => {
+                    if (headers[index]) {
+                        td.setAttribute('data-label', headers[index]);
+                    }
+                });
+            });
+        });
+    }
+
+    // Exécuter au chargement
+    transformTablesForMobile();
+
+    // Re-exécuter si la taille change
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(transformTablesForMobile, 250);
+    });
+
+    // ============================================
+    // ALERTES AUTO-DISMISS
+    // ============================================
+    document.querySelectorAll('.alert-dismissible').forEach(alert => {
+        setTimeout(() => {
+            try {
+                bootstrap.Alert.getOrCreateInstance(alert).close();
+            } catch(e) {}
+        }, 6000);
+    });
+
+    // ============================================
+    // CONFIRMATION POUR ACTIONS DANGEREUSES
+    // ============================================
+    document.querySelectorAll('[data-confirm]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            if (!confirm(el.dataset.confirm)) {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // ============================================
+    // FERMER LES MODALES AVEC ÉCHAP
+    // ============================================
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.show').forEach(modal => {
+                try {
+                    bootstrap.Modal.getInstance(modal)?.hide();
+                } catch(err) {}
+            });
+        }
+    });
+
+});

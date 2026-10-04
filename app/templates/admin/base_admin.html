@@ -1,0 +1,66 @@
+{% extends "base.html" %} {% block title %}{% block admin_title
+%}Administration{% endblock %} — LionFlow AI{% endblock %} {% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <span class="badge bg-danger">
+    <i class="bi bi-shield-fill-check"></i> ADMIN
+  </span>
+  <h1 class="h3 mb-0">{% block page_title %}Administration{% endblock %}</h1>
+</div>
+
+{# Navigation admin #}
+<div class="card lf-stat-card mb-4">
+  <div class="card-body py-2 px-3">
+    <nav class="nav nav-pills flex-wrap gap-1">
+      <a
+        class="nav-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}"
+        href="{{ url_for('admin.dashboard') }}"
+      >
+        <i class="bi bi-speedometer2"></i> Tableau de bord
+      </a>
+      <a
+        class="nav-link {% if 'admin.users' in (request.endpoint or '') or request.endpoint == 'admin.user_detail' %}active{% endif %}"
+        href="{{ url_for('admin.users_list') }}"
+      >
+        <i class="bi bi-people"></i> Utilisateurs
+      </a>
+      <a
+        class="nav-link {% if 'admin.businesses' in (request.endpoint or '') or request.endpoint == 'admin.business_detail' %}active{% endif %}"
+        href="{{ url_for('admin.businesses_list') }}"
+      >
+        <i class="bi bi-building"></i> Entreprises
+      </a>
+      <a
+        class="nav-link {% if 'admin.subscriptions' in (request.endpoint or '') %}active{% endif %}"
+        href="{{ url_for('admin.subscriptions_list') }}"
+      >
+        <i class="bi bi-credit-card"></i> Abonnements
+      </a>
+      <a
+        class="nav-link {% if 'admin.campaigns' in (request.endpoint or '') %}active{% endif %}"
+        href="{{ url_for('admin.campaigns_list') }}"
+      >
+        <i class="bi bi-megaphone"></i> Campagnes
+      </a>
+      <a
+        class="nav-link {% if 'admin.chatbot' in (request.endpoint or '') %}active{% endif %}"
+        href="{{ url_for('admin.chatbot_stats') }}"
+      >
+        <i class="bi bi-robot"></i> Chatbot
+      </a>
+      <a
+        class="nav-link {% if 'admin.logs' in (request.endpoint or '') %}active{% endif %}"
+        href="{{ url_for('admin.logs_global') }}"
+      >
+        <i class="bi bi-journal-text"></i> Journal global
+      </a>
+      <a
+        class="nav-link {% if 'admin.settings' in (request.endpoint or '') %}active{% endif %}"
+        href="{{ url_for('admin.settings') }}"
+      >
+        <i class="bi bi-gear"></i> Réglages
+      </a>
+    </nav>
+  </div>
+</div>
+
+{% block admin_content %}{% endblock %} {% endblock %}

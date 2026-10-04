@@ -7,7 +7,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 
-from flask import current_app, url_for
+from flask import current_app
 from app.extensions import db
 from app.models.user import User
 from app.models.notification import Notification
@@ -59,6 +59,7 @@ class AuthService:
         db.session.add(user)
         db.session.flush()
 
+        # Notification interne
         notif = Notification(
             user_id=user.id,
             title="Bienvenue sur LionFlow AI 🦁",
@@ -76,6 +77,14 @@ class AuthService:
             description=f"Nouvel utilisateur inscrit : {user.email}",
             user_id=user.id,
         )
+
+        # Email de bienvenue (non bloquant)
+        try:
+            from app.services.email_service import EmailService
+            EmailService.send_welcome(user)
+        except Exception:
+            current_app.logger.exception("Erreur envoi email de bienvenue")
+
         return user
 
     # ==================================================
@@ -208,16 +217,34 @@ class AuthService:
         )
 
     # ==================================================
-    # UTILITAIRE
+    # ENVOI D'EMAIL DE RESET
     # ==================================================
     @staticmethod
     def send_reset_email(user: User, raw_token: str) -> str:
-        reset_url = url_for(
-            "auth.reset_password",
-            token=raw_token,
-            _external=True,
-        )
-        current_app.logger.info(
-            f"[LionFlow] Lien de reset pour {user.email} : {reset_url}"
-        )
+        """
+        Envoie le lien de reset par email.
+        Utilise APP_BASE_URL pour construire l'URL publique
+        (fonctionne avec ngrok, domaine de production, etc.).
+        """
+        from app.services.email_service import EmailService
+
+        # ✅ Utiliser APP_BASE_URL au lieu du host de la requête
+        base_url = current_app.config.get(
+            "APP_BASE_URL", "http://localhost:5000"
+        ).rstrip("/")
+        reset_url = f"{base_url}/auth/reset-password/{raw_token}"
+
+        # Envoyer par email
+        sent = EmailService.send_password_reset(user, reset_url)
+
+        if sent:
+            current_app.logger.info(
+                f"[LionFlow] Email de reset envoye a {user.email} — {reset_url}"
+            )
+        else:
+            current_app.logger.warning(
+                f"[LionFlow] Echec envoi a {user.email}. "
+                f"URL de fallback : {reset_url}"
+            )
+
         return reset_url

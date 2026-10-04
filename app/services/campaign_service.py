@@ -2,8 +2,8 @@
 Service d'orchestration des campagnes.
 Gère les transitions de statut, la génération de messages et l'envoi.
 
+Supporte les médias (image, PDF, vidéo).
 En mode développement : l'envoi est simulé (pas d'appel réel à Meta).
-En production : brancher sur WhatsAppService + file d'attente Celery.
 """
 from datetime import datetime, timezone
 
@@ -111,6 +111,7 @@ class CampaignService:
     def _process(campaign: Campaign) -> None:
         from app.services.whatsapp_service import WhatsAppService
 
+        # Récupérer les contacts ciblés
         contact_ids = [
             row[0] for row in
             db.session.query(campaign_contacts.c.contact_id)
@@ -127,11 +128,19 @@ class CampaignService:
 
         campaign.total_contacts = len(contacts)
 
+        # Messages existants indexés par contact
         existing = {
             m.contact_id: m for m in
             Message.query.filter_by(campaign_id=campaign.id).all()
         }
 
+        # 📎 Vérifier si la campagne a un média
+        has_media = campaign.media_file_id is not None and campaign.media_file is not None
+        media_info = ""
+        if has_media:
+            media_info = f" [{campaign.media_file.media_type.upper()}]"
+
+        # Création des messages manquants
         for contact in contacts:
             if contact.id in existing:
                 continue
@@ -146,22 +155,35 @@ class CampaignService:
             db.session.add(msg)
         db.session.commit()
 
+        # Envoi des messages en attente
         pending = (
             Message.query
             .filter_by(campaign_id=campaign.id, status="pending")
             .all()
         )
         for msg in pending:
+            # Si la campagne a été mise en pause entre-temps → on stoppe
             db.session.refresh(campaign)
             if campaign.status != "running":
                 break
 
             try:
-                result = WhatsAppService.send_text(
-                    account=campaign.whatsapp_account,
-                    to=msg.contact.phone,
-                    text=msg.content or "",
-                )
+                # 📎 Si la campagne a un média → envoyer le média
+                if has_media:
+                    result = WhatsAppService.send_media(
+                        account=campaign.whatsapp_account,
+                        to=msg.contact.phone,
+                        media_file=campaign.media_file,
+                        caption=msg.content or "",
+                    )
+                else:
+                    # Sinon → message texte classique
+                    result = WhatsAppService.send_text(
+                        account=campaign.whatsapp_account,
+                        to=msg.contact.phone,
+                        text=msg.content or "",
+                    )
+
                 if result.get("success"):
                     msg.mark_sent(external_id=result.get("external_id"))
                 else:
@@ -170,6 +192,7 @@ class CampaignService:
                 msg.mark_failed(str(e)[:500])
             db.session.commit()
 
+        # Recalcul & statut final
         campaign.recalc_counters()
         remaining = Message.query.filter_by(
             campaign_id=campaign.id, status="pending"
@@ -179,14 +202,16 @@ class CampaignService:
             campaign.finished_at = _utcnow()
             db.session.commit()
 
+            notif_msg = (
+                f"La campagne « {campaign.name} »{media_info} est terminée : "
+                f"{campaign.sent_count} envoyés, "
+                f"{campaign.failed_count} échecs."
+            )
+
             NotificationService.notify(
                 user_id=campaign.business.owner_id,
                 title="Campagne terminée",
-                message=(
-                    f"La campagne « {campaign.name} » est terminée : "
-                    f"{campaign.sent_count} envoyés, "
-                    f"{campaign.failed_count} échecs."
-                ),
+                message=notif_msg,
                 type="success" if campaign.failed_count == 0 else "warning",
                 link=f"/campaigns/{campaign.id}",
             )
@@ -196,8 +221,10 @@ class CampaignService:
     # ==================================================
     @staticmethod
     def _render_message(campaign: Campaign, contact: Contact) -> str:
+        """Retourne le contenu final : via template ou message brut."""
         if campaign.template:
             return campaign.template.render(contact)
+        # Message brut avec substitutions
         text = campaign.message or ""
         replacements = {
             "{{prenom}}": contact.first_name or "",
@@ -223,6 +250,7 @@ class CampaignService:
         # ⚠️ MySQL stocke des DATETIME naïfs → on retire le tzinfo
         now_utc = _utcnow()
 
+        # Campagnes programmées dont l'heure est passée
         due = (
             Campaign.query
             .filter(
@@ -240,6 +268,7 @@ class CampaignService:
                     f"Erreur démarrage campagne planifiée id={c.id}"
                 )
 
+        # Campagnes 'running' avec messages en attente (reprise)
         running = Campaign.query.filter_by(status="running").all()
         for c in running:
             pending_count = Message.query.filter_by(

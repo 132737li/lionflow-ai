@@ -1,66 +1,246 @@
-{% extends "base.html" %}
-{% block title %}Mon profil — LionFlow AI{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Mon profil — LionFlow AI{% endblock
+%} {% block content %}
 <div class="container py-4">
-    <h1 class="h3 mb-4">Mon profil</h1>
+  <div
+    class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+  >
+    <h1 class="h3 mb-0">Mon profil</h1>
+    <a href="{{ url_for('auth.edit_profile') }}" class="btn btn-primary">
+      <i class="bi bi-pencil"></i> Modifier le profil
+    </a>
+  </div>
 
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0 text-center">
-                <div class="card-body p-4">
-                    <div class="lf-avatar-badge mx-auto mb-3">
-                        <i class="bi bi-person-circle"></i>
-                    </div>
-                    <h5 class="mb-1">{{ current_user.full_name }}</h5>
-                    <p class="text-muted small mb-2">{{ current_user.email }}</p>
-                    <span class="badge bg-{{ 'danger' if current_user.is_admin else 'primary' }}">
-                        {{ current_user.role|upper }}
-                    </span>
-                </div>
-            </div>
+  <div class="row g-4">
+    {# ==== Carte profil (avatar + infos clés) ==== #}
+    <div class="col-md-4">
+      <div class="card lf-stat-card text-center">
+        <div class="card-body p-4">
+          {% if current_user.avatar_path %}
+          <img
+            src="{{ url_for('static', filename=current_user.avatar_path) }}"
+            alt="Avatar"
+            class="rounded-circle mb-3"
+            style="
+              width: 120px;
+              height: 120px;
+              object-fit: cover;
+              border: 3px solid var(--lf-primary);
+            "
+          />
+          {% else %}
+          <div class="lf-avatar-badge mx-auto mb-3">
+            <i class="bi bi-person-circle"></i>
+          </div>
+          {% endif %}
+
+          <h5 class="mb-1">{{ current_user.full_name }}</h5>
+          <p class="text-muted small mb-2">{{ current_user.email }}</p>
+          <span
+            class="badge bg-{{ 'danger' if current_user.is_admin else 'primary' }}"
+          >
+            {{ current_user.role|upper }}
+          </span>
         </div>
-
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Informations</h5>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Prénom</dt>
-                        <dd class="col-sm-8">{{ current_user.first_name or '—' }}</dd>
-
-                        <dt class="col-sm-4">Nom</dt>
-                        <dd class="col-sm-8">{{ current_user.last_name or '—' }}</dd>
-
-                        <dt class="col-sm-4">Email</dt>
-                        <dd class="col-sm-8">{{ current_user.email }}</dd>
-
-                        <dt class="col-sm-4">Rôle</dt>
-                        <dd class="col-sm-8">{{ current_user.role }}</dd>
-
-                        <dt class="col-sm-4">Compte créé le</dt>
-                        <dd class="col-sm-8">
-                            {{ current_user.created_at.strftime('%d/%m/%Y à %H:%M') if current_user.created_at else '—' }}
-                        </dd>
-
-                        <dt class="col-sm-4">Dernière connexion</dt>
-                        <dd class="col-sm-8">
-                            {{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') if current_user.last_login_at else '—' }}
-                        </dd>
-
-                        <dt class="col-sm-4">Entreprises</dt>
-                        <dd class="col-sm-8">{{ current_user.businesses.count() }}</dd>
-                    </dl>
-
-                    <hr>
-                    <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-primary">
-                        <i class="bi bi-key"></i> Changer le mot de passe
-                    </a>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    {# ==== Carte informations détaillées ==== #}
+    <div class="col-md-8">
+      <div class="card lf-stat-card">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Informations</h5>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Prénom</dt>
+            <dd class="col-sm-8">{{ current_user.first_name or '—' }}</dd>
+
+            <dt class="col-sm-4">Nom</dt>
+            <dd class="col-sm-8">{{ current_user.last_name or '—' }}</dd>
+
+            <dt class="col-sm-4">Email</dt>
+            <dd class="col-sm-8">{{ current_user.email }}</dd>
+
+            <dt class="col-sm-4">Rôle</dt>
+            <dd class="col-sm-8">{{ current_user.role }}</dd>
+
+            <dt class="col-sm-4">Compte créé le</dt>
+            <dd class="col-sm-8">
+              {{ current_user.created_at.strftime('%d/%m/%Y à %H:%M') if
+              current_user.created_at else '—' }}
+            </dd>
+
+            <dt class="col-sm-4">Dernière connexion</dt>
+            <dd class="col-sm-8">
+              {{ current_user.last_login_at.strftime('%d/%m/%Y à %H:%M') if
+              current_user.last_login_at else '—' }}
+            </dd>
+
+            <dt class="col-sm-4">Entreprises</dt>
+            <dd class="col-sm-8">{{ current_user.businesses.count() }}</dd>
+          </dl>
+
+          <hr />
+          <a
+            href="{{ url_for('auth.change_password') }}"
+            class="btn btn-outline-primary"
+          >
+            <i class="bi bi-key"></i> Changer le mot de passe
+          </a>
+
+          {# 🔔 Notifications Push #}
+          <hr />
+          <h6 class="mb-3">🔐 Sécurité (2FA)</h6>
+
+          {% if current_user.totp_enabled %}
+          <div class="alert alert-success small mb-3">
+            <i class="bi bi-shield-check"></i>
+            <strong>2FA activée</strong>
+            {% if current_user.totp_confirmed_at %} — depuis le {{
+            current_user.totp_confirmed_at.strftime('%d/%m/%Y') }} {% endif %}
+            <br />
+            <span class="text-muted">
+              Codes de secours restants :
+              <strong
+                >{{ current_user.totp_backup_codes | length if
+                current_user.totp_backup_codes else 0 }}</strong
+              >
+            </span>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              class="btn btn-outline-warning btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#disable2faModal"
+            >
+              <i class="bi bi-shield-x"></i> Désactiver la 2FA
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#regenerateCodesModal"
+            >
+              <i class="bi bi-arrow-clockwise"></i> Regénérer les codes de
+              secours
+            </button>
+          </div>
+          {% else %}
+          <div class="alert alert-warning small mb-3">
+            <i class="bi bi-shield-exclamation"></i>
+            <strong>2FA désactivée.</strong>
+            Protégez votre compte avec la double authentification.
+          </div>
+          <a href="{{ url_for('two_factor.setup') }}" class="btn btn-primary">
+            <i class="bi bi-shield-check"></i> Activer la 2FA
+          </a>
+          {% endif %}
+
+          <hr />
+          <h6 class="mb-3"><i class="bi bi-bell"></i> Notifications push</h6>
+          <p class="small text-muted mb-2">
+            Recevez une notification sur votre téléphone quand un client écrit
+            ou quand une campagne se termine.
+          </p>
+          <div class="d-flex gap-2 flex-wrap">
+            <button
+              type="button"
+              id="pushToggleBtn"
+              class="btn btn-outline-primary"
+            >
+              <i class="bi bi-bell"></i> Activer les notifications
+            </button>
+            <button
+              type="button"
+              id="pushTestBtn"
+              class="btn btn-outline-secondary"
+            >
+              <i class="bi bi-send"></i> Tester
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-{% endblock %}
+{# Modales 2FA #} {% if current_user.totp_enabled %}
+<div class="modal fade" id="disable2faModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('two_factor.disable') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-header">
+          <h5 class="modal-title">Désactiver la 2FA</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-danger small">
+            <i class="bi bi-exclamation-triangle"></i>
+            La désactivation réduit la sécurité de votre compte.
+          </p>
+          <label class="form-label small">Confirmez votre mot de passe</label>
+          <input
+            type="password"
+            name="password"
+            class="form-control"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-warning">Désactiver</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="regenerateCodesModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form
+        method="POST"
+        action="{{ url_for('two_factor.regenerate_backup_codes') }}"
+      >
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-header">
+          <h5 class="modal-title">Regénérer les codes de secours</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p class="small">
+            Les anciens codes seront <strong>invalidés</strong>. Vous obtiendrez
+            10 nouveaux codes.
+          </p>
+          <label class="form-label small">Confirmez votre mot de passe</label>
+          <input
+            type="password"
+            name="password"
+            class="form-control"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary">Regénérer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endblock %}

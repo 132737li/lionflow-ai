@@ -1,0 +1,282 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Utilisateur — {{ user.full_name }}{% endblock %}
+
+{% block admin_content %}
+
+{# En-tête #}
+<div class="card lf-stat-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                {% if user.avatar_path %}
+                <img src="{{ url_for('static', filename=user.avatar_path) }}"
+                     alt="" class="rounded-circle"
+                     style="width: 72px; height: 72px; object-fit: cover; border: 3px solid var(--lf-primary);">
+                {% else %}
+                <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center"
+                     style="width: 72px; height: 72px; color: var(--lf-primary); font-weight: 700; font-size: 1.5rem;">
+                    {{ user.initials }}
+                </div>
+                {% endif %}
+                <div>
+                    <h4 class="mb-1">{{ user.full_name }}</h4>
+                    <div class="text-muted small">{{ user.email }}</div>
+                    <div class="mt-2 d-flex gap-2">
+                        {% if user.is_admin %}
+                        <span class="badge bg-danger">ADMIN</span>
+                        {% else %}
+                        <span class="badge bg-primary">USER</span>
+                        {% endif %}
+                        {% if user.is_active %}
+                        <span class="badge bg-success">Actif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactif</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('admin.users_list') }}" class="btn btn-light">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+                <form method="POST" action="{{ url_for('admin.user_toggle_active', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-{{ 'warning' if user.is_active else 'success' }}">
+                        {% if user.is_active %}
+                        <i class="bi bi-pause-fill"></i> Désactiver
+                        {% else %}
+                        <i class="bi bi-play-fill"></i> Activer
+                        {% endif %}
+                    </button>
+                </form>
+                {% if user.id != current_user.id %}
+                <form method="POST" action="{{ url_for('admin.user_toggle_role', user_id=user.id) }}"
+                      data-confirm="Changer le rôle de cet utilisateur ?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn btn-outline-danger">
+                        {% if user.is_admin %}
+                        <i class="bi bi-arrow-down-circle"></i> Rétrograder
+                        {% else %}
+                        <i class="bi bi-arrow-up-circle"></i> Promouvoir Admin
+                        {% endif %}
+                    </button>
+                </form>
+                <button type="button" class="btn btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#deleteUserModal">
+                    <i class="bi bi-trash"></i> Supprimer
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Statistiques #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0">{{ total_businesses }}</div>
+                <div class="small text-muted">Entreprises</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0">{{ total_contacts }}</div>
+                <div class="small text-muted">Contacts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0">{{ total_campaigns }}</div>
+                <div class="small text-muted">Campagnes</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0">{{ total_api_keys }}</div>
+                <div class="small text-muted">Clés API</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Infos + Réinitialisation #}
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Informations</h6></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-5">ID</dt>
+                    <dd class="col-7">#{{ user.id }}</dd>
+
+                    <dt class="col-5">Email</dt>
+                    <dd class="col-7">{{ user.email }}</dd>
+
+                    <dt class="col-5">Prénom</dt>
+                    <dd class="col-7">{{ user.first_name or '—' }}</dd>
+
+                    <dt class="col-5">Nom</dt>
+                    <dd class="col-7">{{ user.last_name or '—' }}</dd>
+
+                    <dt class="col-5">Rôle</dt>
+                    <dd class="col-7">{{ user.role }}</dd>
+
+                    <dt class="col-5">Vérifié</dt>
+                    <dd class="col-7">{{ 'Oui' if user.is_verified else 'Non' }}</dd>
+
+                    <dt class="col-5">Créé le</dt>
+                    <dd class="col-7">
+                        {{ user.created_at.strftime('%d/%m/%Y à %H:%M') if user.created_at else '—' }}
+                    </dd>
+
+                    <dt class="col-5">Dernière connexion</dt>
+                    <dd class="col-7">
+                        {{ user.last_login_at.strftime('%d/%m/%Y à %H:%M') if user.last_login_at else 'Jamais' }}
+                    </dd>
+
+                    <dt class="col-5">Notifications</dt>
+                    <dd class="col-7">
+                        {{ total_notifications }} ({{ unread_notifications }} non lues)
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Réinitialiser le mot de passe</h6></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Réinitialisez le mot de passe de cet utilisateur en cas d'oubli ou de compromission.
+                </p>
+                <form method="POST" action="{{ url_for('admin.user_reset_password', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small">Nouveau mot de passe (min. 8 caractères)</label>
+                        <input type="text" name="new_password" class="form-control" minlength="8" required
+                               placeholder="Ex: TempPass2026!">
+                        <div class="form-text">
+                            ⚠️ Communiquez-le à l'utilisateur de manière sécurisée. Il pourra le changer après connexion.
+                        </div>
+                    </div>
+                    <button class="btn btn-warning">
+                        <i class="bi bi-key"></i> Réinitialiser
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Entreprises de l'utilisateur #}
+{% if businesses %}
+<div class="card lf-stat-card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Entreprises ({{ total_businesses }})</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Plan</th>
+                    <th>Contacts</th>
+                    <th>Campagnes</th>
+                    <th>Créée le</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in businesses %}
+                <tr>
+                    <td class="fw-semibold small">{{ b.name }}</td>
+                    <td>
+                        <span class="badge bg-primary-subtle text-primary-emphasis">
+                            {{ b.plan }}
+                        </span>
+                    </td>
+                    <td class="small">{{ b.contacts.count() }}</td>
+                    <td class="small">{{ b.campaigns.count() }}</td>
+                    <td class="small text-muted">
+                        {{ b.created_at.strftime('%d/%m/%Y') if b.created_at else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Logs récents #}
+<div class="card lf-stat-card">
+    <div class="card-header bg-white"><h6 class="mb-0">Activité récente (20 dernières)</h6></div>
+    {% if recent_logs %}
+    <div class="table-responsive" style="max-height: 400px;">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Action</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td class="small text-muted text-nowrap">
+                        {{ log.created_at.strftime('%d/%m/%Y %H:%M') if log.created_at else '—' }}
+                    </td>
+                    <td><span class="badge bg-secondary-subtle text-secondary-emphasis">{{ log.action }}</span></td>
+                    <td class="small">{{ log.description or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-center text-muted py-4 small">
+        Aucune activité.
+    </div>
+    {% endif %}
+</div>
+
+{# Modale suppression #}
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger-subtle">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Supprimer l'utilisateur
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Supprimer définitivement <strong>{{ user.full_name }}</strong> ?</p>
+                <div class="alert alert-danger small mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Cette action est irréversible.</strong><br>
+                    Toutes ses entreprises, contacts, campagnes, messages,
+                    abonnements et paiements seront également supprimés.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('admin.user_delete', user_id=user.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Entreprise — {{ business.name }}{% endblock %}
+
+{% block admin_content %}
+
+{# En-tête #}
+<div class="card lf-stat-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h4 class="mb-1">{{ business.name }}</h4>
+                <div class="text-muted small">
+                    {% if business.email %}{{ business.email }}{% endif %}
+                    {% if business.phone %} · {{ business.phone }}{% endif %}
+                    {% if business.country %} · {{ business.country }}{% endif %}
+                </div>
+                <div class="mt-2 d-flex gap-2">
+                    <span class="badge bg-primary-subtle text-primary-emphasis">
+                        Plan {{ business.plan }}
+                    </span>
+                    {% if business.subscription %}
+                    <span class="badge bg-{{ 'success' if business.subscription.status == 'active' else 'secondary' }}">
+                        {{ business.subscription.status }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('admin.businesses_list') }}" class="btn btn-light">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+                <button type="button" class="btn btn-outline-danger"
+                        data-bs-toggle="modal" data-bs-target="#deleteBusinessModal">
+                    <i class="bi bi-trash"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Stats #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ total_contacts }}</div>
+                <div class="small text-muted">Contacts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ total_campaigns }}</div>
+                <div class="small text-muted">Campagnes</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ total_messages }}</div>
+                <div class="small text-muted">Messages</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ total_templates }}</div>
+                <div class="small text-muted">Modèles</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ total_waba }}</div>
+                <div class="small text-muted">Comptes WABA</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h5 mb-0">{{ subscriptions|length }}</div>
+                <div class="small text-muted">Abonnements</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Gestion du plan #}
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Changer le plan</h6></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Modifier le plan manuellement (sans paiement). Utile en cas de problème technique.
+                </p>
+                <form method="POST" action="{{ url_for('admin.business_change_plan', business_id=business.id) }}"
+                      data-confirm="Changer le plan de cette entreprise ?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small">Nouveau plan</label>
+                        <select name="plan" class="form-select">
+                            {% for key, cfg in all_plans.items() %}
+                            <option value="{{ key }}" {% if business.plan == key %}selected{% endif %}>
+                                {{ cfg.label }} ({{ cfg.price_eur }}€)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Changer le plan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card lf-stat-card h-100">
+            <div class="card-header bg-white"><h6 class="mb-0">Prolonger l'abonnement</h6></div>
+            <div class="card-body">
+                <p class="small text-muted">
+                    Prolonger l'abonnement actif de X jours.
+                </p>
+                <form method="POST" action="{{ url_for('admin.business_extend_subscription', business_id=business.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small">Nombre de jours</label>
+                        <input type="number" name="days" value="30" min="1" max="365"
+                               class="form-control">
+                    </div>
+                    <button class="btn btn-success">
+                        <i class="bi bi-calendar-plus"></i> Prolonger
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Abonnements #}
+{% if subscriptions %}
+<div class="card lf-stat-card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Historique des abonnements</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Plan</th>
+                    <th>Statut</th>
+                    <th>Démarré le</th>
+                    <th>Expire le</th>
+                    <th>Jours restants</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in subscriptions %}
+                <tr>
+                    <td><span class="badge bg-primary-subtle text-primary-emphasis">{{ s.plan }}</span></td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if s.status == 'active' else 'secondary' }}">
+                            {{ s.status }}
+                        </span>
+                    </td>
+                    <td class="small text-muted">
+                        {{ s.started_at.strftime('%d/%m/%Y') if s.started_at else '—' }}
+                    </td>
+                    <td class="small text-muted">
+                        {{ s.expires_at.strftime('%d/%m/%Y') if s.expires_at else '—' }}
+                    </td>
+                    <td class="small">
+                        {% if s.days_remaining is not none %}
+                        {{ s.days_remaining }} j
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Comptes WhatsApp #}
+{% if whatsapp_accounts %}
+<div class="card lf-stat-card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Comptes WhatsApp</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Numéro</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for w in whatsapp_accounts %}
+                <tr>
+                    <td class="small">{{ w.name }}</td>
+                    <td class="small"><code>{{ w.phone_number }}</code></td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if w.status == 'connected' else 'secondary' }}">
+                            {{ w.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Dernières campagnes #}
+{% if recent_campaigns %}
+<div class="card lf-stat-card mb-4">
+    <div class="card-header bg-white"><h6 class="mb-0">Dernières campagnes</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Nom</th>
+                    <th>Statut</th>
+                    <th>Contacts</th>
+                    <th>Créée le</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in recent_campaigns %}
+                <tr>
+                    <td class="small fw-semibold">{{ c.name }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if c.status == 'completed' else 'primary' if c.status == 'running' else 'secondary' }}">
+                            {{ c.status }}
+                        </span>
+                    </td>
+                    <td class="small">{{ c.total_contacts }}</td>
+                    <td class="small text-muted">
+                        {{ c.created_at.strftime('%d/%m/%Y') if c.created_at else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Paiements #}
+{% if payments %}
+<div class="card lf-stat-card">
+    <div class="card-header bg-white"><h6 class="mb-0">Paiements récents</h6></div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Montant</th>
+                    <th>Fournisseur</th>
+                    <th>Statut</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                <tr>
+                    <td class="fw-semibold small">{{ p.amount_euros }}€</td>
+                    <td class="small">{{ p.provider }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'success' if p.status == 'succeeded' else 'warning' if p.status == 'pending' else 'danger' }}">
+                            {{ p.status }}
+                        </span>
+                    </td>
+                    <td class="small text-muted">
+                        {{ p.created_at.strftime('%d/%m/%Y %H:%M') if p.created_at else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# Modale suppression #}
+<div class="modal fade" id="deleteBusinessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger-subtle">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Supprimer l'entreprise
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Supprimer définitivement <strong>{{ business.name }}</strong> ?</p>
+                <div class="alert alert-danger small mb-0">
+                    <strong>Action irréversible.</strong><br>
+                    Tous les contacts, campagnes, messages, modèles et comptes WhatsApp
+                    associés seront également supprimés.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('admin.business_delete', business_id=business.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

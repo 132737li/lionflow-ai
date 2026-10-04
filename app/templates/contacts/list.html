@@ -214,6 +214,10 @@
 </div>
 {% endfor %}
 
+{# 📱 Bouton flottant mobile #}
+<a href="{{ url_for('contacts.create_contact') }}" class="lf-fab" title="Nouveau contact">
+    <i class="bi bi-plus-lg"></i>
+</a>
 {% endblock %}
 
 {% block scripts %}

@@ -3,9 +3,10 @@ Formulaires WTForms pour l'authentification.
 Validation côté serveur + CSRF.
 """
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import (
-    DataRequired, Email, Length, EqualTo, Regexp, ValidationError,
+    DataRequired, Email, Length, EqualTo, Regexp, ValidationError, Optional,
 )
 
 from app.models.user import User
@@ -112,3 +113,24 @@ class ChangePasswordForm(FlaskForm):
         validators=[DataRequired(), EqualTo("new_password")],
     )
     submit = SubmitField("Changer le mot de passe")
+
+
+class ProfileForm(FlaskForm):
+    """Formulaire de modification du profil (prénom, nom, avatar)."""
+    first_name = StringField(
+        "Prénom",
+        validators=[Optional(), Length(max=100)],
+    )
+    last_name = StringField(
+        "Nom",
+        validators=[Optional(), Length(max=100)],
+    )
+    avatar = FileField(
+        "Photo de profil (jpg, png, gif, webp — max 5 Mo)",
+        validators=[
+            Optional(),
+            FileAllowed(["jpg", "jpeg", "png", "gif", "webp"],
+                        "Format d'image non autorisé."),
+        ],
+    )
+    submit = SubmitField("Enregistrer")

@@ -7,10 +7,23 @@
     <p class="text-muted">Passez à un plan supérieur à tout moment.</p>
 </div>
 
+{% if not payment_configured %}
+<div class="alert alert-warning mx-auto" style="max-width: 700px;">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <strong>Paiement non configuré.</strong>
+    Les plans payants (Pro, Business) ne peuvent pas être activés pour l'instant.
+    Contactez l'administrateur de LionFlow AI.
+</div>
+{% endif %}
+
 <div class="row g-4 justify-content-center">
     {% for key, plan in plans.items() %}
+    {% set is_current = subscription and subscription.plan == key %}
+    {% set is_paid = plan.price_eur > 0 %}
+    {% set is_blocked = is_paid and not payment_configured %}
+
     <div class="col-md-6 col-lg-4">
-        <div class="card lf-stat-card h-100 {% if subscription and subscription.plan == key %}border-2 border-primary{% endif %}">
+        <div class="card lf-stat-card h-100 {% if is_current %}border-2 border-primary{% endif %}">
             <div class="card-body p-4">
                 <div class="text-center mb-4">
                     <h4 class="mb-1">{{ plan.label }}</h4>
@@ -23,35 +36,59 @@
                 </div>
 
                 <ul class="list-unstyled mb-4">
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
-                        {{ plan.max_contacts if plan.max_contacts > 0 else 'Contacts illimités' }}
-                        {% if plan.max_contacts > 0 %} contacts{% endif %}
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        {% if plan.max_contacts > 0 %}
+                        {{ plan.max_contacts }} contacts
+                        {% else %}
+                        Contacts illimités
+                        {% endif %}
                     </li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
                         {{ plan.max_messages_month }} messages / mois
                     </li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
                         {{ plan.max_campaigns }} campagnes
                     </li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success"></i>
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
                         {{ plan.max_whatsapp_accounts }} compte(s) WhatsApp
                     </li>
                     <li class="mb-2">
                         {% if plan.advanced_stats %}
                         <i class="bi bi-check-circle-fill text-success"></i> Statistiques avancées
                         {% else %}
-                        <i class="bi bi-x-circle text-muted"></i> <span class="text-muted">Statistiques avancées</span>
+                        <i class="bi bi-x-circle text-muted"></i>
+                        <span class="text-muted">Statistiques avancées</span>
                         {% endif %}
                     </li>
                 </ul>
 
-                {% if subscription and subscription.plan == key %}
-                <button class="btn btn-secondary w-100" disabled>Plan actuel</button>
+                {% if is_current %}
+                <button class="btn btn-secondary w-100" disabled>
+                    <i class="bi bi-check-circle"></i> Plan actuel
+                </button>
+
+                {% elif is_blocked %}
+                <button class="btn btn-secondary w-100" disabled>
+                    <i class="bi bi-lock"></i> Paiement indisponible
+                </button>
+
+                {% elif is_paid %}
+                {# Plan payant → page de confirmation → Paiement #}
+                <a href="{{ url_for('subscriptions.confirm_plan', plan_key=key) }}"
+                   class="btn btn-primary w-100">
+                    <i class="bi bi-credit-card"></i> Payer {{ plan.price_eur }}€ et passer à {{ plan.label }}
+                </a>
+
                 {% else %}
+                {# Plan gratuit → activation directe #}
                 <form method="POST" action="{{ url_for('subscriptions.change_plan', plan_key=key) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-primary w-100">
-                        {% if plan.price_eur == 0 %}Choisir ce plan{% else %}Passer à {{ plan.label }}{% endif %}
+                        Choisir ce plan
                     </button>
                 </form>
                 {% endif %}
@@ -59,5 +96,17 @@
         </div>
     </div>
     {% endfor %}
+</div>
+
+<div class="text-center mt-5">
+    <p class="text-muted small mb-0">
+        <i class="bi bi-shield-lock"></i>
+        Paiements sécurisés.
+        {% if payment_configured %}
+        Propulsé par {{ payment_provider_name }}.
+        {% endif %}
+        <br>
+        Aucune donnée bancaire n'est stockée sur nos serveurs.
+    </p>
 </div>
 {% endblock %}

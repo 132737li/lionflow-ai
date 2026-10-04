@@ -8,6 +8,7 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
+from flask_mail import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,6 +16,7 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 bcrypt = Bcrypt()
 jwt = JWTManager()
+mail = Mail()
 
 # Configuration du login manager
 login_manager.login_view = "auth.login"

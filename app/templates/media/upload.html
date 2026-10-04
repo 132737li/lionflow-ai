@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Uploader un média — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="{{ request.referrer or url_for('media.list_media') }}" class="btn btn-link text-decoration-none">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="h3 mb-0">☁️ Uploader un média</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="card lf-stat-card mb-3">
+                <div class="card-body p-4">
+
+                    {# Zone de drop #}
+                    <div id="dropZone" class="text-center p-5 rounded"
+                         style="border: 2px dashed var(--lf-border, #e5e7eb); background: var(--lf-body-bg, #f9fafb); cursor: pointer; transition: all 0.2s;">
+                        <i class="bi bi-cloud-arrow-up" style="font-size: 4rem; color: var(--lf-primary);"></i>
+                        <h5 class="mt-3 mb-1">Glissez vos fichiers ici</h5>
+                        <p class="text-muted mb-3">ou cliquez pour parcourir</p>
+                        <input type="file" name="files" id="fileInput" multiple
+                               accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.3gp"
+                               style="display: none;">
+                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="bi bi-folder2-open"></i> Choisir des fichiers
+                        </button>
+                    </div>
+
+                    {# Aperçu des fichiers sélectionnés #}
+                    <div id="filePreview" class="mt-3"></div>
+
+                    {# Légende optionnelle #}
+                    <div class="mt-4">
+                        <label class="form-label small">Légende par défaut (optionnel)</label>
+                        <input type="text" name="caption" class="form-control"
+                               placeholder="Ex : Découvrez notre nouvelle collection"
+                               maxlength="500">
+                        <div class="form-text">
+                            Cette légende sera proposée par défaut quand vous utiliserez ce média dans une campagne.
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {# Info formats #}
+            <div class="card lf-stat-card mb-3">
+                <div class="card-body">
+                    <h6 class="mb-3"><i class="bi bi-info-circle"></i> Formats acceptés</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 text-center">
+                                <i class="bi bi-image fs-3 text-primary"></i>
+                                <div class="fw-semibold small mt-2">Images</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    JPG, PNG, WEBP<br>
+                                    <strong>Max {{ max_image_mb }} Mo</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 text-center">
+                                <i class="bi bi-file-earmark-pdf fs-3 text-danger"></i>
+                                <div class="fw-semibold small mt-2">Documents</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    PDF<br>
+                                    <strong>Max {{ max_doc_mb }} Mo</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 text-center">
+                                <i class="bi bi-camera-video fs-3 text-info"></i>
+                                <div class="fw-semibold small mt-2">Vidéos</div>
+                                <div class="text-muted" style="font-size: 0.8rem;">
+                                    MP4, 3GP<br>
+                                    <strong>Max {{ max_video_mb }} Mo</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Boutons #}
+            <div class="d-flex justify-content-end gap-2">
+                <a href="{{ request.referrer or url_for('media.list_media') }}" class="btn btn-light">Annuler</a>
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                    <i class="bi bi-cloud-upload"></i> Uploader <span id="countLabel"></span>
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const filePreview = document.getElementById('filePreview');
+const submitBtn = document.getElementById('submitBtn');
+const countLabel = document.getElementById('countLabel');
+
+let selectedFiles = [];
+
+// ============ DRAG & DROP ============
+['dragenter', 'dragover'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--lf-primary)';
+        dropZone.style.background = 'var(--lf-primary-light, #f0fdf4)';
+    });
+});
+
+['dragleave', 'drop'].forEach(evt => {
+    dropZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '';
+        dropZone.style.background = '';
+    });
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    handleFiles(e.dataTransfer.files);
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+});
+
+function handleFiles(files) {
+    selectedFiles = Array.from(files);
+
+    // Assigner au input
+    const dt = new DataTransfer();
+    selectedFiles.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+
+    renderPreview();
+}
+
+function renderPreview() {
+    filePreview.innerHTML = '';
+
+    if (selectedFiles.length === 0) {
+        submitBtn.disabled = true;
+        countLabel.textContent = '';
+        return;
+    }
+
+    selectedFiles.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'border rounded p-2 mb-2 d-flex align-items-center gap-3';
+
+        const isImage = /\.(jpg|jpeg|png|webp)$/i.test(file.name);
+        const isVideo = /\.(mp4|3gp)$/i.test(file.name);
+
+        let iconHtml = '';
+        if (isImage) {
+            const url = URL.createObjectURL(file);
+            iconHtml = `<img src="${url}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">`;
+        } else if (isVideo) {
+            iconHtml = `<div class="d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: #0ea5e9; border-radius: 6px;"><i class="bi bi-play-circle text-white fs-4"></i></div>`;
+        } else {
+            iconHtml = `<div class="d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: #ef4444; border-radius: 6px;"><i class="bi bi-file-earmark-pdf text-white fs-4"></i></div>`;
+        }
+
+        item.innerHTML = `
+            ${iconHtml}
+            <div class="flex-grow-1 min-width-0">
+                <div class="small fw-semibold text-truncate">${file.name}</div>
+                <div class="text-muted" style="font-size: 0.75rem;">
+                    ${formatSize(file.size)}
+                </div>
+            </div>
+        `;
+        filePreview.appendChild(item);
+    });
+
+    submitBtn.disabled = false;
+    countLabel.textContent = `(${selectedFiles.length})`;
+}
+
+function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' o';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' Ko';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' Mo';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Abonnement activé</title></head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f0fdf4;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0fdf4; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background: #fff; border-radius: 12px; overflow: hidden;">
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%); padding: 30px; text-align: center;">
+                            <h1 style="color: #fff; margin: 0; font-size: 24px;">✅ Abonnement {{ plan_label }} activé</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                                Bonjour <strong>{{ user.full_name }}</strong>,
+                            </p>
+                            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                                Votre abonnement <strong>{{ plan_label }}</strong> a été activé avec succès !
+                            </p>
+                            <table cellpadding="0" cellspacing="0" style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 20px 0; width: 100%;">
+                                <tr>
+                                    <td style="color: #065f46; font-size: 15px;">
+                                        <strong>Plan :</strong> {{ plan_label }}<br>
+                                        <strong>Montant :</strong> {{ amount }}
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                                Merci pour votre confiance !
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f9fafb; padding: 20px 30px; text-align: center;">
+                            <p style="color: #6b7280; font-size: 12px; margin: 0;">© 2026 {{ app_name }}</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

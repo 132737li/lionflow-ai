@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Vérification 2FA — LionFlow AI{% endblock %}
+
+{% block auth_content %}
+<div class="row justify-content-center align-items-center min-vh-100">
+    <div class="col-md-6 col-lg-4">
+
+        <div class="text-center mb-4">
+            <img src="{{ url_for('static', filename='images/logo.png') }}"
+                 alt="LionFlow AI" class="lf-logo-badge">
+            <h1 class="h4 mt-3 mb-1">🔐 Vérification 2FA</h1>
+            <p class="text-muted small">
+                Entrez le code à 6 chiffres généré par votre app d'authentification.
+            </p>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+
+                <form method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <input type="text"
+                               name="code"
+                               class="form-control form-control-lg text-center"
+                               placeholder="000000"
+                               maxlength="6"
+                               pattern="[0-9]{6}"
+                               inputmode="numeric"
+                               autocomplete="one-time-code"
+                               autofocus
+                               required
+                               style="font-size: 2rem; letter-spacing: 0.75rem; font-weight: 700;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-shield-check"></i> Vérifier
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="text-center small">
+                    <a href="{{ url_for('two_factor.cancel') }}" class="text-decoration-none">
+                        <i class="bi bi-arrow-left"></i> Retour à la connexion
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="alert alert-secondary small mt-3 mb-0">
+            <i class="bi bi-key"></i>
+            <strong>Code de secours ?</strong>
+            Entrez simplement un de vos codes de secours à la place du code habituel.
+        </div>
+
+    </div>
+</div>
+{% endblock %}

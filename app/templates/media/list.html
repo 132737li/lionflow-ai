@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Médias — LionFlow AI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 mb-0">🖼️ Médiathèque</h1>
+        <p class="text-muted mb-0">
+            {{ stats.total }} fichier(s) · {{ stats.total_size_human }}
+        </p>
+    </div>
+    <a href="{{ url_for('media.upload') }}" class="btn btn-primary">
+        <i class="bi bi-cloud-upload"></i> Uploader
+    </a>
+</div>
+
+{# Cartes statistiques #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('media.list_media') }}" class="card lf-stat-card text-decoration-none h-100 {% if not media_type_filter %}border-primary{% endif %}">
+            <div class="card-body text-center py-3">
+                <div class="h4 mb-0">{{ stats.total }}</div>
+                <div class="small text-muted">Tous</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('media.list_media', type='image') }}" class="card lf-stat-card text-decoration-none h-100 {% if media_type_filter == 'image' %}border-primary{% endif %}">
+            <div class="card-body text-center py-3">
+                <div class="h4 mb-0 text-primary">{{ stats.images }}</div>
+                <div class="small text-muted"><i class="bi bi-image"></i> Images</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('media.list_media', type='document') }}" class="card lf-stat-card text-decoration-none h-100 {% if media_type_filter == 'document' %}border-primary{% endif %}">
+            <div class="card-body text-center py-3">
+                <div class="h4 mb-0 text-danger">{{ stats.documents }}</div>
+                <div class="small text-muted"><i class="bi bi-file-earmark-pdf"></i> Documents</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-3">
+        <a href="{{ url_for('media.list_media', type='video') }}" class="card lf-stat-card text-decoration-none h-100 {% if media_type_filter == 'video' %}border-primary{% endif %}">
+            <div class="card-body text-center py-3">
+                <div class="h4 mb-0 text-info">{{ stats.videos }}</div>
+                <div class="small text-muted"><i class="bi bi-camera-video"></i> Vidéos</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+{# Filtres #}
+<div class="card lf-stat-card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control"
+                           placeholder="Nom du fichier…">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Type</label>
+                <select name="type" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="image" {% if media_type_filter == 'image' %}selected{% endif %}>Images</option>
+                    <option value="document" {% if media_type_filter == 'document' %}selected{% endif %}>Documents</option>
+                    <option value="video" {% if media_type_filter == 'video' %}selected{% endif %}>Vidéos</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                <a href="{{ url_for('media.list_media') }}" class="btn btn-light">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Grille de médias #}
+{% if medias %}
+<div class="row g-3">
+    {% for m in medias %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card lf-stat-card h-100" style="overflow: hidden;">
+            {# Aperçu #}
+            <a href="{{ url_for('media.detail', media_id=m.id) }}"
+               class="d-block text-decoration-none"
+               style="height: 160px; overflow: hidden; position: relative;">
+                {% if m.is_image %}
+                <img src="{{ url_for('static', filename=m.file_path) }}"
+                     alt="{{ m.original_name }}"
+                     style="width: 100%; height: 100%; object-fit: cover;">
+                {% elif m.is_video %}
+                <div class="d-flex align-items-center justify-content-center h-100"
+                     style="background: linear-gradient(135deg, #0ea5e9, #0c4a6e);">
+                    <i class="bi bi-play-circle text-white" style="font-size: 3rem;"></i>
+                </div>
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center h-100"
+                     style="background: linear-gradient(135deg, #ef4444, #991b1b);">
+                    <i class="bi bi-file-earmark-pdf text-white" style="font-size: 3rem;"></i>
+                </div>
+                {% endif %}
+
+                {# Badge type #}
+                <span class="badge position-absolute top-0 end-0 m-2
+                    {% if m.is_image %}bg-primary
+                    {% elif m.is_video %}bg-info text-dark
+                    {% else %}bg-danger{% endif %}">
+                    {{ m.media_type }}
+                </span>
+            </a>
+
+            {# Infos #}
+            <div class="card-body p-2">
+                <div class="small fw-semibold text-truncate" title="{{ m.original_name }}">
+                    {{ m.original_name }}
+                </div>
+                <div class="text-muted" style="font-size: 0.75rem;">
+                    {{ m.size_human }}
+                    {% if m.width and m.height %}
+                    · {{ m.width }}×{{ m.height }}
+                    {% endif %}
+                </div>
+
+                {# Actions #}
+                <div class="d-flex gap-1 mt-2">
+                    <a href="{{ url_for('media.detail', media_id=m.id) }}"
+                       class="btn btn-sm btn-outline-primary flex-grow-1" title="Voir">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="{{ url_for('media.download', media_id=m.id) }}"
+                       class="btn btn-sm btn-outline-secondary" title="Télécharger">
+                        <i class="bi bi-download"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#delMedia{{ m.id }}"
+                            title="Supprimer">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Modale suppression #}
+    <div class="modal fade" id="delMedia{{ m.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger-subtle">
+                    <h5 class="modal-title text-danger">Supprimer le média</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Supprimer définitivement <strong>{{ m.original_name }}</strong> ?
+                    <div class="alert alert-warning small mt-2 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Le fichier sera supprimé du disque et de la base.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <form method="POST" action="{{ url_for('media.delete', media_id=m.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Pagination #}
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('media.list_media', page=pagination.prev_num, q=q, type=media_type_filter) }}">«</a>
+        </li>
+        {% for p in pagination.iter_pages() %}
+            {% if p %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('media.list_media', page=p, q=q, type=media_type_filter) }}">{{ p }}</a>
+            </li>
+            {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('media.list_media', page=pagination.next_num, q=q, type=media_type_filter) }}">»</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card lf-stat-card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-images fs-1 text-muted"></i>
+        <h4 class="mt-3">Aucun média</h4>
+        <p class="text-muted">
+            Uploadez vos premières images, PDF ou vidéos pour les utiliser dans vos campagnes.
+        </p>
+        <a href="{{ url_for('media.upload') }}" class="btn btn-primary">
+            <i class="bi bi-cloud-upload"></i> Uploader un fichier
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

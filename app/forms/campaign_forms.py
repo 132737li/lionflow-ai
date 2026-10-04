@@ -31,6 +31,11 @@ class CampaignForm(FlaskForm):
         coerce=int,
         validators=[Optional()],
     )
+    media_file_id = SelectField(
+        "Média (image, PDF, vidéo)",
+        coerce=int,
+        validators=[Optional()],
+    )
     message = TextAreaField(
         "Message personnalisé (optionnel si modèle sélectionné)",
         validators=[Optional(), Length(max=4096)],

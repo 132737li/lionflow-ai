@@ -1,250 +1,374 @@
-{% extends "base.html" %}
-{% block title %}{{ campaign.name }} — LionFlow AI{% endblock %}
+{% extends "base.html" %} {% block title %}{{ campaign.name }} — LionFlow AI{%
+endblock %} {% block content %}
+<div
+  class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2"
+>
+  <div>
+    <h1 class="h3 mb-1">{{ campaign.name }}</h1>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span
+        class="badge {% if campaign.status == 'completed' %}bg-success {% elif campaign.status == 'running' %}bg-primary {% elif campaign.status == 'scheduled' %}bg-info {% elif campaign.status == 'paused' %}bg-warning text-dark {% elif campaign.status == 'cancelled' %}bg-danger {% else %}bg-secondary{% endif %}"
+      >
+        {{ campaign.status }}
+      </span>
+      {# 📎 Aperçu du média #} {% if campaign.media_file %}
+      <div class="card border mb-3">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-3">
+            {# Miniature #} {% if campaign.media_file.is_image %}
+            <img
+              src="{{ url_for('static', filename=campaign.media_file.file_path) }}"
+              alt="{{ campaign.media_file.original_name }}"
+              style="
+                width: 64px;
+                height: 64px;
+                object-fit: cover;
+                border-radius: 8px;
+              "
+            />
+            {% elif campaign.media_file.is_video %}
+            <div
+              style="
+                width: 64px;
+                height: 64px;
+                background: linear-gradient(135deg, #0ea5e9, #0c4a6e);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <i
+                class="bi bi-play-circle text-white"
+                style="font-size: 1.75rem"
+              ></i>
+            </div>
+            {% else %}
+            <div
+              style="
+                width: 64px;
+                height: 64px;
+                background: linear-gradient(135deg, #ef4444, #991b1b);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <i
+                class="bi bi-file-earmark-pdf text-white"
+                style="font-size: 1.75rem"
+              ></i>
+            </div>
+            {% endif %} {# Infos #}
+            <div class="flex-grow-1 min-width-0">
+              <div class="fw-semibold small text-truncate">
+                {{ campaign.media_file.original_name }}
+              </div>
+              <div class="text-muted small">
+                {{ campaign.media_file.size_human }} {% if
+                campaign.media_file.width and campaign.media_file.height %} · {{
+                campaign.media_file.width }}×{{ campaign.media_file.height }} px
+                {% endif %}
+              </div>
+              <span
+                class="badge mt-1 {% if campaign.media_file.is_image %}bg-primary {% elif campaign.media_file.is_video %}bg-info text-dark {% else %}bg-danger{% endif %}"
+              >
+                {{ campaign.media_file.media_type }}
+              </span>
+            </div>
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
-    <div>
-        <h1 class="h3 mb-1">{{ campaign.name }}</h1>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="badge
-                {% if campaign.status == 'completed' %}bg-success
-                {% elif campaign.status == 'running' %}bg-primary
-                {% elif campaign.status == 'scheduled' %}bg-info
-                {% elif campaign.status == 'paused' %}bg-warning text-dark
-                {% elif campaign.status == 'cancelled' %}bg-danger
-                {% else %}bg-secondary{% endif %}">
-                {{ campaign.status }}
-            </span>
-            {% if campaign.template %}
-            <span class="text-muted small"><i class="bi bi-file-text"></i> {{ campaign.template.name }}</span>
-            {% endif %}
-            {% if campaign.whatsapp_account %}
-            <span class="text-muted small">
-                <i class="bi bi-whatsapp text-success"></i> {{ campaign.whatsapp_account.name }}
-            </span>
-            {% endif %}
+            <a
+              href="{{ url_for('media.detail', media_id=campaign.media_file.id) }}"
+              class="btn btn-sm btn-outline-primary"
+            >
+              Voir
+            </a>
+          </div>
         </div>
+      </div>
+      {% endif %} {% if campaign.contact_list %}
+      <span class="text-muted small"
+        ><i class="bi bi-people"></i> {{ campaign.contact_list.name }}</span
+      >
+      {% endif %} {% if campaign.template %}
+      <span class="text-muted small"
+        ><i class="bi bi-file-text"></i> {{ campaign.template.name }}</span
+      >
+      {% endif %} {% if campaign.whatsapp_account %}
+      <span class="text-muted small">
+        <i class="bi bi-whatsapp text-success"></i> {{
+        campaign.whatsapp_account.name }}
+      </span>
+      {% endif %}
     </div>
+  </div>
 
-    <div class="d-flex gap-2 flex-wrap">
-        {% if campaign.status in ('draft', 'scheduled', 'paused') %}
-        <a href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-pencil"></i> Modifier
-        </a>
-        {% endif %}
-
-        {% if campaign.status == 'running' %}
-        <form method="POST" action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-warning"><i class="bi bi-pause-fill"></i> Mettre en pause</button>
-        </form>
-        {% endif %}
-
-        {% if campaign.status == 'paused' %}
-        <form method="POST" action="{{ url_for('campaigns.resume_campaign', campaign_id=campaign.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-success"><i class="bi bi-play-fill"></i> Reprendre</button>
-        </form>
-        {% endif %}
-
-        {% if campaign.status in ('draft', 'scheduled', 'paused') %}
-        <form method="POST" action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}"
-              data-confirm="Démarrer cette campagne ?">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-primary"><i class="bi bi-play-fill"></i> Démarrer</button>
-        </form>
-        {% endif %}
-
-        {% if campaign.can_cancel %}
-        <form method="POST" action="{{ url_for('campaigns.cancel_campaign', campaign_id=campaign.id) }}"
-              data-confirm="Annuler cette campagne ?">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button class="btn btn-outline-danger"><i class="bi bi-x-circle"></i> Annuler</button>
-        </form>
-        {% endif %}
-
-        {% if campaign.status not in ('running',) %}
-        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#delModal">
-            <i class="bi bi-trash"></i>
-        </button>
-        {% endif %}
-    </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if campaign.status in ('draft', 'scheduled', 'paused') %}
+    <a
+      href="{{ url_for('campaigns.edit_campaign', campaign_id=campaign.id) }}"
+      class="btn btn-outline-secondary"
+    >
+      <i class="bi bi-pencil"></i> Modifier
+    </a>
+    {% endif %} {% if campaign.status == 'running' %}
+    <form
+      method="POST"
+      action="{{ url_for('campaigns.pause_campaign', campaign_id=campaign.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-warning">
+        <i class="bi bi-pause-fill"></i> Mettre en pause
+      </button>
+    </form>
+    {% endif %} {% if campaign.status == 'paused' %}
+    <form
+      method="POST"
+      action="{{ url_for('campaigns.resume_campaign', campaign_id=campaign.id) }}"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-success">
+        <i class="bi bi-play-fill"></i> Reprendre
+      </button>
+    </form>
+    {% endif %} {% if campaign.status in ('draft', 'scheduled', 'paused') %}
+    <form
+      method="POST"
+      action="{{ url_for('campaigns.start_campaign', campaign_id=campaign.id) }}"
+      data-confirm="Démarrer cette campagne ?"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-primary">
+        <i class="bi bi-play-fill"></i> Démarrer
+      </button>
+    </form>
+    {% endif %} {% if campaign.can_cancel %}
+    <form
+      method="POST"
+      action="{{ url_for('campaigns.cancel_campaign', campaign_id=campaign.id) }}"
+      data-confirm="Annuler cette campagne ?"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button class="btn btn-outline-danger">
+        <i class="bi bi-x-circle"></i> Annuler
+      </button>
+    </form>
+    {% endif %} {% if campaign.status not in ('running',) %}
+    <button
+      type="button"
+      class="btn btn-outline-danger"
+      data-bs-toggle="modal"
+      data-bs-target="#delModal"
+    >
+      <i class="bi bi-trash"></i>
+    </button>
+    {% endif %}
+  </div>
 </div>
 
 {# Stats de progression #}
 <div class="row g-3 mb-4">
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0">{{ campaign.total_contacts }}</div>
-                <div class="small text-muted">Contacts</div>
-            </div>
-        </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0">{{ campaign.total_contacts }}</div>
+        <div class="small text-muted">Contacts</div>
+      </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0 text-primary">{{ campaign.sent_count }}</div>
-                <div class="small text-muted">Envoyés</div>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0 text-primary">{{ campaign.sent_count }}</div>
+        <div class="small text-muted">Envoyés</div>
+      </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0 text-info">{{ campaign.delivered_count }}</div>
-                <div class="small text-muted">Délivrés</div>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0 text-info">{{ campaign.delivered_count }}</div>
+        <div class="small text-muted">Délivrés</div>
+      </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0 text-success">{{ campaign.read_count }}</div>
-                <div class="small text-muted">Lus</div>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0 text-success">{{ campaign.read_count }}</div>
+        <div class="small text-muted">Lus</div>
+      </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0 text-danger">{{ campaign.failed_count }}</div>
-                <div class="small text-muted">Échecs</div>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0 text-danger">{{ campaign.failed_count }}</div>
+        <div class="small text-muted">Échecs</div>
+      </div>
     </div>
-    <div class="col-6 col-md-2">
-        <div class="card lf-stat-card text-center">
-            <div class="card-body py-3">
-                <div class="h4 mb-0">{{ campaign.progress_pct }}%</div>
-                <div class="small text-muted">Progression</div>
-            </div>
-        </div>
+  </div>
+  <div class="col-6 col-md-2">
+    <div class="card lf-stat-card text-center">
+      <div class="card-body py-3">
+        <div class="h4 mb-0">{{ campaign.progress_pct }}%</div>
+        <div class="small text-muted">Progression</div>
+      </div>
     </div>
+  </div>
 </div>
 
 {# Infos + message #}
 <div class="row g-3 mb-4">
-    <div class="col-lg-8">
-        <div class="card lf-stat-card">
-            <div class="card-header bg-white"><h6 class="mb-0">Message envoyé</h6></div>
-            <div class="card-body">
-                {% if campaign.template %}
-                <p class="small text-muted mb-2">
-                    Depuis le modèle : <strong>{{ campaign.template.name }}</strong>
-                </p>
-                <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">{{ campaign.template.content }}</div>
-                {% elif campaign.message %}
-                <div class="border rounded p-3 bg-light" style="white-space: pre-wrap;">{{ campaign.message }}</div>
-                {% else %}
-                <p class="text-muted mb-0">Aucun message défini.</p>
-                {% endif %}
-            </div>
+  <div class="col-lg-8">
+    <div class="card lf-stat-card">
+      <div class="card-header bg-white">
+        <h6 class="mb-0">Message envoyé</h6>
+      </div>
+      <div class="card-body">
+        {% if campaign.template %}
+        <p class="small text-muted mb-2">
+          Depuis le modèle : <strong>{{ campaign.template.name }}</strong>
+        </p>
+        <div class="border rounded p-3 bg-light" style="white-space: pre-wrap">
+          {{ campaign.template.content }}
         </div>
-    </div>
-
-    <div class="col-lg-4">
-        <div class="card lf-stat-card">
-            <div class="card-header bg-white"><h6 class="mb-0">Programmation</h6></div>
-            <div class="card-body">
-                <dl class="row mb-0 small">
-                    <dt class="col-6">Créée le</dt>
-                    <dd class="col-6">{{ campaign.created_at.strftime('%d/%m/%Y %H:%M') if campaign.created_at else '—' }}</dd>
-
-                    <dt class="col-6">Programmée</dt>
-                    <dd class="col-6">
-                        {% if campaign.scheduled_at %}
-                            {{ campaign.scheduled_at.strftime('%d/%m/%Y %H:%M') }} UTC
-                        {% else %}—{% endif %}
-                    </dd>
-
-                    <dt class="col-6">Fuseau</dt>
-                    <dd class="col-6">{{ campaign.timezone }}</dd>
-
-                    <dt class="col-6">Démarrée</dt>
-                    <dd class="col-6">{{ campaign.started_at.strftime('%d/%m/%Y %H:%M') if campaign.started_at else '—' }}</dd>
-
-                    <dt class="col-6">Terminée</dt>
-                    <dd class="col-6">{{ campaign.finished_at.strftime('%d/%m/%Y %H:%M') if campaign.finished_at else '—' }}</dd>
-                </dl>
-            </div>
+        {% elif campaign.message %}
+        <div class="border rounded p-3 bg-light" style="white-space: pre-wrap">
+          {{ campaign.message }}
         </div>
+        {% else %}
+        <p class="text-muted mb-0">Aucun message défini.</p>
+        {% endif %}
+      </div>
     </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card lf-stat-card">
+      <div class="card-header bg-white">
+        <h6 class="mb-0">Programmation</h6>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-6">Créée le</dt>
+          <dd class="col-6">
+            {{ campaign.created_at.strftime('%d/%m/%Y %H:%M') if
+            campaign.created_at else '—' }}
+          </dd>
+
+          <dt class="col-6">Programmée</dt>
+          <dd class="col-6">
+            {% if campaign.scheduled_at %} {{
+            campaign.scheduled_at.strftime('%d/%m/%Y %H:%M') }} UTC {% else
+            %}—{% endif %}
+          </dd>
+
+          <dt class="col-6">Fuseau</dt>
+          <dd class="col-6">{{ campaign.timezone }}</dd>
+
+          <dt class="col-6">Démarrée</dt>
+          <dd class="col-6">
+            {{ campaign.started_at.strftime('%d/%m/%Y %H:%M') if
+            campaign.started_at else '—' }}
+          </dd>
+
+          <dt class="col-6">Terminée</dt>
+          <dd class="col-6">
+            {{ campaign.finished_at.strftime('%d/%m/%Y %H:%M') if
+            campaign.finished_at else '—' }}
+          </dd>
+        </dl>
+      </div>
+    </div>
+  </div>
 </div>
 
 {# Derniers messages #}
 <div class="card lf-stat-card">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Derniers messages</h6>
-        <a href="{{ url_for('messages.list_messages', campaign_id=campaign.id) }}"
-           class="small text-decoration-none">Voir tous</a>
-    </div>
-    {% if messages %}
-    <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Contact</th>
-                    <th>Téléphone</th>
-                    <th>Statut</th>
-                    <th>Envoyé le</th>
-                    <th>Erreur</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in messages %}
-                <tr>
-                    <td>{{ m.contact.full_name if m.contact else '—' }}</td>
-                    <td>{{ m.contact.phone if m.contact else '—' }}</td>
-                    <td>
-                        <span class="badge
-                            {% if m.status == 'read' %}bg-success
-                            {% elif m.status == 'delivered' %}bg-info
-                            {% elif m.status == 'sent' %}bg-primary
-                            {% elif m.status == 'failed' %}bg-danger
-                            {% else %}bg-secondary{% endif %}">
-                            {{ m.status }}
-                        </span>
-                    </td>
-                    <td class="small text-muted">
-                        {{ m.sent_at.strftime('%d/%m/%Y %H:%M') if m.sent_at else '—' }}
-                    </td>
-                    <td class="small text-danger">{{ m.error or '' }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    {% else %}
-    <div class="card-body text-center text-muted py-4">
-        Aucun message généré pour le moment.
-    </div>
-    {% endif %}
+  <div
+    class="card-header bg-white d-flex justify-content-between align-items-center"
+  >
+    <h6 class="mb-0">Derniers messages</h6>
+    <a
+      href="{{ url_for('messages.list_messages', campaign_id=campaign.id) }}"
+      class="small text-decoration-none"
+      >Voir tous</a
+    >
+  </div>
+  {% if messages %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Contact</th>
+          <th>Téléphone</th>
+          <th>Statut</th>
+          <th>Envoyé le</th>
+          <th>Erreur</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in messages %}
+        <tr>
+          <td>{{ m.contact.full_name if m.contact else '—' }}</td>
+          <td>{{ m.contact.phone if m.contact else '—' }}</td>
+          <td>
+            <span
+              class="badge {% if m.status == 'read' %}bg-success {% elif m.status == 'delivered' %}bg-info {% elif m.status == 'sent' %}bg-primary {% elif m.status == 'failed' %}bg-danger {% else %}bg-secondary{% endif %}"
+            >
+              {{ m.status }}
+            </span>
+          </td>
+          <td class="small text-muted">
+            {{ m.sent_at.strftime('%d/%m/%Y %H:%M') if m.sent_at else '—' }}
+          </td>
+          <td class="small text-danger">{{ m.error or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center text-muted py-4">
+    Aucun message généré pour le moment.
+  </div>
+  {% endif %}
 </div>
 
 {# Modal suppression #}
 <div class="modal fade" id="delModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Supprimer la campagne</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                Supprimer définitivement <strong>{{ campaign.name }}</strong> ?
-                <p class="text-danger small mt-2 mb-0">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    Tous les messages générés seront également supprimés.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                <form method="POST" action="{{ url_for('campaigns.delete_campaign', campaign_id=campaign.id) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
-                </form>
-            </div>
-        </div>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Supprimer la campagne</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Supprimer définitivement <strong>{{ campaign.name }}</strong> ?
+        <p class="text-danger small mt-2 mb-0">
+          <i class="bi bi-exclamation-triangle"></i>
+          Tous les messages générés seront également supprimés.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+          Annuler
+        </button>
+        <form
+          method="POST"
+          action="{{ url_for('campaigns.delete_campaign', campaign_id=campaign.id) }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-danger">Supprimer</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

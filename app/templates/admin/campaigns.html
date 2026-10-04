@@ -1,0 +1,187 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Campagnes (modération){% endblock %}
+
+{% block admin_content %}
+
+{# Compteurs par statut #}
+<div class="row g-2 mb-3">
+    {% for key, label, color in [
+        ('draft','Brouillon','secondary'),
+        ('scheduled','Programmées','info'),
+        ('running','En cours','primary'),
+        ('paused','En pause','warning'),
+        ('completed','Terminées','success'),
+        ('cancelled','Annulées','danger'),
+    ] %}
+    <div class="col-6 col-md-2">
+        <a href="{{ url_for('admin.campaigns_list', status=key) }}"
+           class="card lf-stat-card text-decoration-none h-100 {% if status_filter == key %}border-{{ color }}{% endif %}">
+            <div class="card-body py-2 text-center">
+                <div class="h5 mb-0 text-{{ color }}">{{ status_counts.get(key, 0) }}</div>
+                <div class="small text-muted">{{ label }}</div>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+{# Filtres #}
+<div class="card lf-stat-card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-6">
+                <label class="form-label small mb-1">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control"
+                           placeholder="Nom de campagne…">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    {% for key in ['draft','scheduled','running','paused','completed','cancelled'] %}
+                    <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ key }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                <a href="{{ url_for('admin.campaigns_list') }}" class="btn btn-light">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Tableau #}
+<div class="card lf-stat-card">
+    {% if campaigns %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Campagne</th>
+                    <th>Entreprise</th>
+                    <th>Statut</th>
+                    <th>Contacts</th>
+                    <th>Envoyés</th>
+                    <th>Créée le</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in campaigns %}
+                <tr>
+                    <td class="fw-semibold small">{{ c.name }}</td>
+                    <td class="small">
+                        {% if c.business %}
+                        <a href="{{ url_for('admin.business_detail', business_id=c.business.id) }}"
+                           class="text-decoration-none">
+                            {{ c.business.name }}
+                        </a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge
+                            {% if c.status == 'completed' %}bg-success
+                            {% elif c.status == 'running' %}bg-primary
+                            {% elif c.status == 'scheduled' %}bg-info
+                            {% elif c.status == 'paused' %}bg-warning text-dark
+                            {% elif c.status == 'cancelled' %}bg-danger
+                            {% else %}bg-secondary{% endif %}">
+                            {{ c.status }}
+                        </span>
+                    </td>
+                    <td class="small">{{ c.total_contacts }}</td>
+                    <td class="small">{{ c.sent_count }}</td>
+                    <td class="small text-muted">
+                        {{ c.created_at.strftime('%d/%m/%Y') if c.created_at else '—' }}
+                    </td>
+                    <td class="text-end">
+                        {% if c.status not in ('completed', 'cancelled') %}
+                        <form method="POST" action="{{ url_for('admin.campaign_cancel', campaign_id=c.id) }}"
+                              class="d-inline"
+                              data-confirm="Annuler cette campagne ?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button class="btn btn-sm btn-outline-warning" title="Annuler">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if c.status != 'running' %}
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#delCamp{{ c.id }}"
+                                title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-center">
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.campaigns_list', page=pagination.prev_num, q=q, status=status_filter) }}">«</a>
+                </li>
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.campaigns_list', page=p, q=q, status=status_filter) }}">{{ p }}</a>
+                    </li>
+                    {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.campaigns_list', page=pagination.next_num, q=q, status=status_filter) }}">»</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-megaphone fs-1"></i>
+        <h4 class="mt-3">Aucune campagne</h4>
+        <p class="mb-0">Aucun résultat pour ces filtres.</p>
+    </div>
+    {% endif %}
+</div>
+
+{# Modales suppression #}
+{% for c in campaigns %}
+<div class="modal fade" id="delCamp{{ c.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger-subtle">
+                <h5 class="modal-title text-danger">Supprimer la campagne</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Supprimer définitivement <strong>{{ c.name }}</strong> ?
+                <div class="alert alert-danger small mt-2 mb-0">
+                    Tous les messages associés seront supprimés.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{{ url_for('admin.campaign_delete', campaign_id=c.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

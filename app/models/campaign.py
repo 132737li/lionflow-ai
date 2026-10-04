@@ -48,8 +48,14 @@ class Campaign(db.Model):
         db.ForeignKey("templates.id", ondelete="SET NULL"),
     )
     whatsapp_account_id = db.Column(
+    db.Integer,
+    db.ForeignKey("whatsapp_accounts.id", ondelete="SET NULL"),
+    )
+    # 📎 Média associé (image, PDF, vidéo)
+    media_file_id = db.Column(
         db.Integer,
-        db.ForeignKey("whatsapp_accounts.id", ondelete="SET NULL"),
+        db.ForeignKey("media_files.id", ondelete="SET NULL"),
+        index=True,
     )
     name = db.Column(db.String(200), nullable=False)
     message = db.Column(db.Text)
@@ -81,6 +87,7 @@ class Campaign(db.Model):
     business = db.relationship("Business", back_populates="campaigns")
     template = db.relationship("Template", back_populates="campaigns")
     whatsapp_account = db.relationship("WhatsAppAccount", back_populates="campaigns")
+    media_file = db.relationship("MediaFile", foreign_keys=[media_file_id])
     messages = db.relationship(
         "Message",
         back_populates="campaign",
@@ -143,6 +150,7 @@ class Campaign(db.Model):
             "business_id": self.business_id,
             "template_id": self.template_id,
             "whatsapp_account_id": self.whatsapp_account_id,
+            "media_file_id": self.media_file_id,
             "name": self.name,
             "message": self.message,
             "status": self.status,

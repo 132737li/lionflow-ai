@@ -1,6 +1,7 @@
 """
 Point d'entrée de LionFlow AI.
 Usage : python run.py
+Support ngrok / tunnels externes.
 """
 import os
 from app import create_app
@@ -22,8 +23,9 @@ if __name__ == "__main__":
             db.create_all()
 
     app.run(
-        host="0.0.0.0",
+        host="0.0.0.0",             # ✅ Écoute sur toutes les interfaces
         port=int(os.getenv("PORT", "5000")),
         debug=app.config.get("DEBUG", False),
-        use_reloader=app.config.get("DEBUG", False),
+        use_reloader=False,          # ✅ Désactivé pour éviter double scheduler
+        threaded=True,               # ✅ Multi-thread pour ngrok
     )

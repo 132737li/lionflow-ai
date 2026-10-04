@@ -1,155 +1,503 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <title>{% block title %}LionFlow AI{% endblock %}</title>
 
+    <!-- ============ PWA ============ -->
+    <meta name="theme-color" content="#10b981" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LionFlow" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="LionFlow AI" />
+    <meta name="description" content="Plateforme SaaS de gestion WhatsApp" />
+
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Favicon & icons -->
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{{ url_for('static', filename='images/icon-96x96.png') }}"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="{{ url_for('static', filename='images/icon-192x192.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="{{ url_for('static', filename='images/apple-touch-icon.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="192x192"
+      href="{{ url_for('static', filename='images/icon-192x192.png') }}"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="512x512"
+      href="{{ url_for('static', filename='images/icon-512x512.png') }}"
+    />
+
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+
+    <!-- Anti-flash : Applique le thème AVANT le rendu -->
+    <script>
+      (function () {
+        const theme = localStorage.getItem("lionflow_theme") || "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
 
     {% block head %}{% endblock %}
-</head>
-<body>
-
-{% if current_user.is_authenticated %}
-<!-- ================= LAYOUT CONNECTÉ ================= -->
-<div class="d-flex" id="wrapper">
-
-    <!-- Sidebar -->
-    <aside class="lf-sidebar" id="sidebar">
+  </head>
+  <body>
+    {% if current_user.is_authenticated %}
+    <!-- ================= LAYOUT CONNECTÉ ================= -->
+    <div class="d-flex" id="wrapper">
+      <!-- Sidebar -->
+      <aside class="lf-sidebar" id="sidebar">
         <div class="lf-sidebar-brand">
-            <i class="bi bi-chat-dots-fill"></i>
-            <span>LionFlow AI</span>
+          <img
+            src="{{ url_for('static', filename='images/logo.png') }}"
+            alt="LionFlow AI"
+            height="36"
+            class="me-2"
+            onerror="
+              this.style.display = 'none';
+              this.nextElementSibling.style.display = 'inline';
+            "
+          />
+          <i class="bi bi-chat-dots-fill" style="display: none"></i>
+          <span>LionFlow AI</span>
         </div>
-        <nav class="lf-sidebar-nav">
-            <a href="{{ url_for('dashboard.index') }}" class="lf-nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-                <i class="bi bi-speedometer2"></i> Tableau de bord
-            </a>
-            <a href="{{ url_for('businesses.list_businesses') }}" class="lf-nav-link {% if 'businesses' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-building"></i> Entreprises
-            </a>
-            <a href="{{ url_for('contacts.list_contacts') }}" class="lf-nav-link {% if 'contacts' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-people"></i> Contacts
-            </a>
-            <a href="{{ url_for('campaigns.list_campaigns') }}" class="lf-nav-link {% if 'campaigns' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-megaphone"></i> Campagnes
-            </a>
-            <a href="{{ url_for('messages.list_messages') }}" class="lf-nav-link {% if 'messages' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-envelope"></i> Messages
-            </a>
-            <a href="{{ url_for('templates.list_templates') }}" class="lf-nav-link {% if 'templates' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-file-text"></i> Modèles
-            </a>
-            <a href="{{ url_for('whatsapp.list_accounts') }}" class="lf-nav-link {% if 'whatsapp' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-whatsapp"></i> Comptes WhatsApp
-            </a>
-            <a href="{{ url_for('subscriptions.current') }}" class="lf-nav-link {% if 'subscriptions' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-credit-card"></i> Abonnement
-            </a>
-            <a href="{{ url_for('notifications.list_notifications') }}" class="lf-nav-link {% if 'notifications' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-bell"></i> Notifications
-            </a>
-            <a href="{{ url_for('api_keys.list_keys') }}" class="lf-nav-link {% if 'api_keys' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-key"></i> Clés API
-            </a>
-            <a href="{{ url_for('logs.list_logs') }}" class="lf-nav-link {% if 'logs' in request.endpoint %}active{% endif %}">
-                <i class="bi bi-journal-text"></i> Journal
-            </a>
-        </nav>
-    </aside>
+        
+          </a>
 
-    <!-- Main -->
-    <div id="page-content-wrapper" class="flex-grow-1">
+          <nav class="lf-sidebar-nav">
+              <a href="{{ url_for('dashboard.index') }}" class="lf-nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                  <i class="bi bi-speedometer2"></i> {{ t('nav.dashboard') }}
+              </a>
+              <a href="{{ url_for('businesses.list_businesses') }}" class="lf-nav-link {% if 'businesses' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-building"></i> {{ t('nav.businesses') }}
+              </a>
+              <a href="{{ url_for('contacts.list_contacts') }}" class="lf-nav-link {% if 'contacts' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-people"></i> {{ t('nav.contacts') }}
+              </a>
+              <a href="{{ url_for('campaigns.list_campaigns') }}" class="lf-nav-link {% if 'campaigns' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-megaphone"></i> {{ t('nav.campaigns') }}
+              </a>
+              <a href="{{ url_for('campaign_templates.list_templates') }}" class="lf-nav-link {% if 'campaign_templates' in (request.endpoint or '') %}active{% endif %}">
+                  <i class="bi bi-file-earmark-richtext"></i> Templates campagnes
+              </a>
+              <a href="{{ url_for('messages.list_messages') }}" class="lf-nav-link {% if 'messages' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-envelope"></i> {{ t('nav.messages') }}
+              </a>
+              <a href="{{ url_for('templates.list_templates') }}" class="lf-nav-link {% if 'templates' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-file-text"></i> {{ t('nav.templates') }}
+              </a>
+              <a href="{{ url_for('media.list_media') }}" class="lf-nav-link {% if 'media' in (request.endpoint or '') %}active{% endif %}">
+                  <i class="bi bi-images"></i> {{ t('nav.media') }}
+              </a>
+              <a href="{{ url_for('whatsapp.list_accounts') }}" class="lf-nav-link {% if 'whatsapp' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-whatsapp"></i> {{ t('nav.whatsapp') }}
+              </a>
+              <a href="{{ url_for('chatbot.dashboard') }}" class="lf-nav-link {% if 'chatbot' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-robot"></i> {{ t('nav.chatbot') }}
+              </a>
+              <a href="{{ url_for('subscriptions.current') }}" class="lf-nav-link {% if 'subscriptions' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-credit-card"></i> {{ t('nav.subscription') }}
+              </a>
+              <a href="{{ url_for('notifications.list_notifications') }}" class="lf-nav-link {% if 'notifications' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-bell"></i> {{ t('nav.notifications') }}
+              </a>
+              <a href="{{ url_for('api_keys.list_keys') }}" class="lf-nav-link {% if 'api_keys' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-key"></i> {{ t('nav.api_keys') }}
+              </a>
+              <a href="{{ url_for('logs.list_logs') }}" class="lf-nav-link {% if 'logs' in request.endpoint %}active{% endif %}">
+                  <i class="bi bi-journal-text"></i> {{ t('nav.logs') }}
+              </a>
+
+              {% if current_user.is_admin %}
+              <div class="mt-2 pt-2 border-top border-white-10">
+                  <div class="px-3 py-1 small text-uppercase"
+                      style="color: rgba(251, 191, 36, 0.7); font-size: 0.75rem; letter-spacing: 1px;">
+                      <i class="bi bi-shield-fill-check"></i> {{ t('nav.administration') }}
+                  </div>
+                  <a href="{{ url_for('admin.dashboard') }}"
+                    class="lf-nav-link {% if 'admin' in (request.endpoint or '') %}active{% endif %}"
+                    style="color: #fbbf24; font-weight: 600;">
+                      <i class="bi bi-shield-fill-check"></i>
+                      <span>{{ t('nav.admin') }}</span>
+                  </a>
+        </div>
+         {% endif %}
+         </nav>
+
+          
+      </aside>
+
+      <!-- Main -->
+      <div id="page-content-wrapper" class="flex-grow-1">
         <!-- Topbar -->
         <nav class="lf-topbar navbar navbar-expand-lg">
-            <button class="btn btn-link" id="sidebarToggle"><i class="bi bi-list fs-4"></i></button>
-            <div class="ms-auto d-flex align-items-center gap-3">
-                {% if g.current_business %}
-                <span class="badge bg-primary-subtle text-primary-emphasis px-3 py-2">
-                    <i class="bi bi-building"></i> {{ g.current_business.name }}
-                </span>
-                {% endif %}
+          <button class="btn btn-link" id="sidebarToggle">
+            <i class="bi bi-list fs-4"></i>
+          </button>
+          <div class="ms-auto d-flex align-items-center gap-3">
+            {% if g.current_business %}
+            <span
+              class="badge bg-primary-subtle text-primary-emphasis px-3 py-2 d-none d-md-inline-flex"
+            >
+              <i class="bi bi-building"></i> {{ g.current_business.name }}
+            </span>
+            {% endif %}
 
-                <!-- Notifications -->
-                <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-link position-relative">
-                    <i class="bi bi-bell fs-5"></i>
-                    {% set unread = current_user.notifications.filter_by(is_read=False).count() %}
-                    {% if unread %}
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        {{ unread }}
+            <!-- Bouton recherche globale -->
+            <button
+              type="button"
+              class="lf-search-trigger"
+              id="lfSearchTrigger"
+              title="Rechercher"
+            >
+              <i class="bi bi-search"></i>
+              <span class="d-none d-lg-inline">Rechercher</span>
+              <span class="lf-search-shortcut d-none d-lg-inline">Ctrl K</span>
+            </button>
+
+            <!-- 🌍 Sélecteur de langue -->
+            <div class="dropdown">
+                <button class="btn btn-link lf-lang-btn" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false" title="{{ t('common.language') }}">
+                    <i class="bi bi-globe2 fs-5"></i>
+                    <span class="lf-lang-code d-none d-md-inline">
+                        {{ current_language|upper }}
                     </span>
-                    {% endif %}
-                </a>
-
-                <!-- User dropdown -->
-                <div class="dropdown">
-                    <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
-                        <i class="bi bi-person-circle"></i>
-                        <span class="d-none d-md-inline">{{ current_user.full_name }}</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person"></i> Mon profil</a></li>
-                        <li><a class="dropdown-item" href="{{ url_for('auth.change_password') }}"><i class="bi bi-key"></i> Changer le mot de passe</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form action="{{ url_for('auth.logout') }}" method="POST" class="d-inline">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="dropdown-item text-danger">
-                                    <i class="bi bi-box-arrow-right"></i> Déconnexion
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end lf-lang-dropdown">
+                    <li>
+                        <h6 class="dropdown-header">
+                            <i class="bi bi-globe2"></i> {{ t('common.language') }}
+                        </h6>
+                    </li>
+                    {% for code, lang in available_languages.items() %}
+                    <li>
+                        <a class="dropdown-item lf-lang-item {% if code == current_language %}active{% endif %}"
+                          href="{{ url_for('i18n.set_language', lang=code) }}">
+                            <span class="lf-lang-flag">
+                                <i class="bi bi-translate"></i>
+                            </span>
+                            <span class="lf-lang-name">{{ lang.name }}</span>
+                            <span class="lf-lang-short">{{ code|upper }}</span>
+                            {% if code == current_language %}
+                            <i class="bi bi-check2-circle ms-2 text-success"></i>
+                            {% endif %}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
             </div>
+
+            <!-- Sélecteur de thème -->
+            <div class="dropdown">
+              <button
+                class="btn btn-link"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Changer de thème"
+              >
+                <i class="bi bi-palette fs-5"></i>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end lf-theme-dropdown">
+                <li><h6 class="dropdown-header">🎨 Choix du thème</h6></li>
+                <li>
+                  <button type="button" class="theme-option" data-theme="light">
+                    <span
+                      class="theme-dot"
+                      style="
+                        background: linear-gradient(135deg, #10b981, #0ea5e9);
+                      "
+                    ></span>
+                    <span>Clair (vert/bleu)</span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="theme-option" data-theme="dark">
+                    <span
+                      class="theme-dot"
+                      style="
+                        background: linear-gradient(135deg, #0f172a, #334155);
+                      "
+                    ></span>
+                    <span>Sombre 🌙</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="theme-option"
+                    data-theme="purple"
+                  >
+                    <span
+                      class="theme-dot"
+                      style="
+                        background: linear-gradient(135deg, #a855f7, #ec4899);
+                      "
+                    ></span>
+                    <span>Violet 💜</span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="theme-option"
+                    data-theme="orange"
+                  >
+                    <span
+                      class="theme-dot"
+                      style="
+                        background: linear-gradient(135deg, #f97316, #f59e0b);
+                      "
+                    ></span>
+                    <span>Orange 🧡</span>
+                  </button>
+                </li>
+                <li>
+                  <button type="button" class="theme-option" data-theme="blue">
+                    <span
+                      class="theme-dot"
+                      style="
+                        background: linear-gradient(135deg, #3b82f6, #06b6d4);
+                      "
+                    ></span>
+                    <span>Bleu 💙</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Notifications -->
+            <a
+              href="{{ url_for('notifications.list_notifications') }}"
+              class="btn btn-link position-relative"
+            >
+              <i class="bi bi-bell fs-5"></i>
+              {% set unread =
+              current_user.notifications.filter_by(is_read=False).count() %} {%
+              if unread %}
+              <span
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              >
+                {{ unread }}
+              </span>
+              {% endif %}
+            </a>
+
+            <!-- User dropdown -->
+            <div class="dropdown">
+              <button
+                class="btn btn-light dropdown-toggle d-flex align-items-center gap-2"
+                type="button"
+                data-bs-toggle="dropdown"
+                data-bs-display="static"
+                aria-expanded="false"
+              >
+                {% if current_user.avatar_path %}
+                <img
+                  src="{{ url_for('static', filename=current_user.avatar_path) }}"
+                  alt="Avatar"
+                  class="rounded-circle"
+                  style="width: 28px; height: 28px; object-fit: cover"
+                />
+                {% else %}
+                <i class="bi bi-person-circle"></i>
+                {% endif %}
+                <span class="d-none d-md-inline"
+                  >{{ current_user.full_name }}</span
+                >
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                  <div class="px-3 py-2 border-bottom d-md-none">
+                    <div class="fw-semibold small">
+                      {{ current_user.full_name }}
+                    </div>
+                    <div class="text-muted small">{{ current_user.email }}</div>
+                  </div>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
+                    <i class="bi bi-person"></i> Mon profil
+                  </a>
+                </li>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{{ url_for('auth.change_password') }}"
+                  >
+                    <i class="bi bi-key"></i> Changer le mot de passe
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <form
+                    action="{{ url_for('auth.logout') }}"
+                    method="POST"
+                    class="d-inline w-100"
+                  >
+                    <input
+                      type="hidden"
+                      name="csrf_token"
+                      value="{{ csrf_token() }}"
+                    />
+                    <button
+                      type="submit"
+                      class="dropdown-item text-danger w-100 text-start"
+                    >
+                      <i class="bi bi-box-arrow-right"></i> Déconnexion
+                    </button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </div>
         </nav>
 
         <!-- Flash messages -->
         <div class="container-fluid py-3">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, msg in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ msg }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-
-            {% block content %}{% endblock %}
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, msg in messages %}
+          <div
+            class="alert alert-{{ category }} alert-dismissible fade show"
+            role="alert"
+          >
+            {{ msg }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+            ></button>
+          </div>
+          {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock
+          %}
         </div>
+      </div>
     </div>
-</div>
 
-{% else %}
-<!-- ================= LAYOUT NON CONNECTÉ ================= -->
-<main class="lf-auth-wrapper">
-    <div class="container">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, msg in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
-                    {{ msg }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        {% block auth_content %}{% endblock %}
+    {% else %}
+    <!-- ================= LAYOUT NON CONNECTÉ ================= -->
+    <main class="lf-auth-wrapper">
+      <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, msg in messages %}
+        <div
+          class="alert alert-{{ category }} alert-dismissible fade show mt-3"
+          role="alert"
+        >
+          {{ msg }}
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
+        </div>
+        {% endfor %} {% endif %} {% endwith %} {% block auth_content %}{%
+        endblock %}
+      </div>
+    </main>
+    {% endif %}
+
+    <!-- ============ MODAL RECHERCHE GLOBALE ============ -->
+    <div
+      class="modal fade lf-search-modal"
+      id="lfSearchModal"
+      tabindex="-1"
+      aria-hidden="true"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="lf-search-input-wrapper">
+            <i class="bi bi-search"></i>
+            <input
+              type="text"
+              id="lfSearchInput"
+              class="lf-search-input"
+              placeholder="Rechercher contacts, campagnes, modèles…"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+            <span class="lf-search-esc">Échap</span>
+          </div>
+          <div class="lf-search-results" id="lfSearchResults">
+            <div class="lf-search-empty">
+              <i class="bi bi-search"></i>
+              <p>Tapez au moins 2 caractères pour rechercher.</p>
+            </div>
+          </div>
+          <div class="lf-search-footer">
+            <small class="text-muted"
+              >Raccourci clavier : <kbd>Ctrl</kbd> + <kbd>K</kbd></small
+            >
+          </div>
+        </div>
+      </div>
     </div>
-</main>
-{% endif %}
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="{{ url_for('static', filename='js/app.js') }}"></script>
-{% block scripts %}{% endblock %}
-</body>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/push.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+
+    <!-- ============ PWA Service Worker ============ -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js", { scope: "/" })
+            .then((registration) => {
+              console.log(
+                "[PWA] Service Worker enregistre:",
+                registration.scope,
+              );
+            })
+            .catch((error) => {
+              console.log("[PWA] Erreur Service Worker:", error);
+            });
+        });
+      }
+    </script>
+
+    {% block scripts %}{% endblock %}
+  </body>
 </html>

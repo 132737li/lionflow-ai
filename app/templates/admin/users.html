@@ -1,0 +1,182 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Utilisateurs{% endblock %}
+
+{% block admin_content %}
+
+{# Compteurs #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0 text-primary">{{ total_users }}</div>
+                <div class="small text-muted">Total</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0 text-success">{{ total_active }}</div>
+                <div class="small text-muted">Actifs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0 text-secondary">{{ total_inactive }}</div>
+                <div class="small text-muted">Inactifs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card lf-stat-card text-center">
+            <div class="card-body py-3">
+                <div class="h4 mb-0 text-danger">{{ total_admins }}</div>
+                <div class="small text-muted">Admins</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Filtres #}
+<div class="card lf-stat-card mb-3">
+    <div class="card-body">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small mb-1">Recherche</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control"
+                           placeholder="Email, nom, prénom…">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Rôle</label>
+                <select name="role" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                    <option value="user" {% if role_filter == 'user' %}selected{% endif %}>User</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Actifs</option>
+                    <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactifs</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                <a href="{{ url_for('admin.users_list') }}" class="btn btn-light">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Tableau #}
+<div class="card lf-stat-card">
+    {% if users %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Entreprises</th>
+                    <th>Inscrit le</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if u.avatar_path %}
+                            <img src="{{ url_for('static', filename=u.avatar_path) }}"
+                                 alt="" class="rounded-circle"
+                                 style="width: 32px; height: 32px; object-fit: cover;">
+                            {% else %}
+                            <div class="rounded-circle bg-primary-subtle d-flex align-items-center justify-content-center"
+                                 style="width: 32px; height: 32px; color: var(--lf-primary); font-weight: 600; font-size: 0.8rem;">
+                                {{ u.initials }}
+                            </div>
+                            {% endif %}
+                            <div>
+                                <a href="{{ url_for('admin.user_detail', user_id=u.id) }}"
+                                   class="text-decoration-none fw-semibold small">
+                                    {{ u.full_name }}
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="small">{{ u.email }}</td>
+                    <td>
+                        {% if u.is_admin %}
+                        <span class="badge bg-danger">Admin</span>
+                        {% else %}
+                        <span class="badge bg-primary">User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if u.is_active %}
+                        <span class="badge bg-success-subtle text-success-emphasis">Actif</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ u.businesses.count() }}</td>
+                    <td class="small text-muted">
+                        {{ u.created_at.strftime('%d/%m/%Y') if u.created_at else '—' }}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('admin.user_detail', user_id=u.id) }}"
+                           class="btn btn-sm btn-outline-primary" title="Voir">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-center">
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.users_list', page=pagination.prev_num, q=q, role=role_filter, status=status_filter) }}">«</a>
+                </li>
+                {% for p in pagination.iter_pages() %}
+                    {% if p %}
+                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.users_list', page=p, q=q, role=role_filter, status=status_filter) }}">{{ p }}</a>
+                    </li>
+                    {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.users_list', page=pagination.next_num, q=q, role=role_filter, status=status_filter) }}">»</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-people fs-1"></i>
+        <h4 class="mt-3">Aucun utilisateur</h4>
+        <p class="mb-0">Aucun résultat pour ces filtres.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

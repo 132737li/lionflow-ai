@@ -1,0 +1,180 @@
+{% extends "base.html" %} {% block title %}Clés API — LionFlow AI{% endblock %}
+{% block content %}
+<div
+  class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2"
+>
+  <div>
+    <h1 class="h3 mb-0">Clés API</h1>
+    <p class="text-muted mb-0">
+      Utilisez ces clés pour authentifier vos appels à l'API REST.
+    </p>
+  </div>
+  <button
+    class="btn btn-primary"
+    data-bs-toggle="modal"
+    data-bs-target="#newKeyModal"
+  >
+    <i class="bi bi-plus-lg"></i> Nouvelle clé
+  </button>
+</div>
+
+{% if new_key %}
+<div class="alert alert-success">
+  <h6 class="alert-heading">
+    <i class="bi bi-check-circle"></i> Clé créée avec succès
+  </h6>
+  <p class="small mb-2">
+    Copiez cette clé maintenant. Elle ne sera plus jamais affichée.
+  </p>
+  <div class="input-group">
+    <input
+      type="text"
+      class="form-control font-monospace"
+      value="{{ new_key }}"
+      readonly
+      id="newKeyValue"
+    />
+    <button class="btn btn-outline-secondary" onclick="copyKey()">
+      <i class="bi bi-clipboard"></i> Copier
+    </button>
+  </div>
+</div>
+{% endif %}
+
+<div class="card lf-stat-card">
+  {% if keys %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Nom</th>
+          <th>Créée le</th>
+          <th>Dernière utilisation</th>
+          <th>Statut</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for k in keys %}
+        <tr>
+          <td class="fw-semibold">{{ k.name }}</td>
+          <td class="small text-muted">
+            {{ k.created_at.strftime('%d/%m/%Y %H:%M') if k.created_at else '—'
+            }}
+          </td>
+          <td class="small text-muted">
+            {% if k.last_used_at %} {{ k.last_used_at.strftime('%d/%m/%Y %H:%M')
+            }} {% else %} Jamais utilisée {% endif %}
+          </td>
+          <td>
+            <span
+              class="badge {% if k.is_active %}bg-success{% else %}bg-secondary{% endif %}"
+            >
+              {% if k.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td class="text-end">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger"
+              data-bs-toggle="modal"
+              data-bs-target="#delKey{{ k.id }}"
+            >
+              <i class="bi bi-trash"></i> Révoquer
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-center text-muted py-5">
+    <i class="bi bi-key fs-1"></i>
+    <h4 class="mt-3">Aucune clé API</h4>
+    <p>Créez une clé pour utiliser l'API REST de LionFlow AI.</p>
+  </div>
+  {% endif %}
+</div>
+
+{# Modales de suppression #} {% for k in keys %}
+<div class="modal fade" id="delKey{{ k.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Révoquer la clé</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Révoquer <strong>{{ k.name }}</strong> ? Toute application utilisant
+        cette clé perdra l'accès.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+          Annuler
+        </button>
+        <form
+          method="POST"
+          action="{{ url_for('api_keys.delete_key', key_id=k.id) }}"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-danger">Révoquer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %} {# Modale création #}
+<div class="modal fade" id="newKeyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" action="{{ url_for('api_keys.create_key') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Nouvelle clé API</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Nom de la clé</label>
+          <input
+            type="text"
+            name="name"
+            class="form-control"
+            placeholder="Ex : Intégration site web"
+            required
+            maxlength="150"
+          />
+          <div class="form-text">
+            Donnez un nom explicite pour identifier facilement l'usage de la
+            clé.
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Annuler
+          </button>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  function copyKey() {
+    const el = document.getElementById("newKeyValue");
+    if (!el) return;
+    el.select();
+    document.execCommand("copy");
+    alert("Clé copiée dans le presse-papiers.");
+  }
+</script>
+{% endblock %}

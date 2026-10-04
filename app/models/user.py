@@ -31,6 +31,18 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
 
+    # 📸 Photo de profil
+    avatar_path = db.Column(db.String(500))
+    
+    # 🌍 Langue préférée
+    language = db.Column(db.String(5), nullable=False, default="fr")
+
+    # 🔐 2FA (TOTP)
+    totp_secret = db.Column(db.String(255))           # Secret chiffré
+    totp_enabled = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    totp_backup_codes = db.Column(db.Text)            # JSON : liste de hash
+    totp_confirmed_at = db.Column(db.DateTime)
+
     reset_token = db.Column(db.String(128), index=True)
     reset_token_exp = db.Column(db.DateTime)
 
@@ -90,6 +102,13 @@ class User(UserMixin, db.Model):
     def is_admin(self) -> bool:
         return self.role == "admin"
 
+    @property
+    def initials(self) -> str:
+        """Retourne les initiales (pour affichage si pas d'avatar)."""
+        first = (self.first_name or "")[:1].upper()
+        last = (self.last_name or "")[:1].upper()
+        return f"{first}{last}" or "?"
+
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email} ({self.role})>"
 
@@ -103,6 +122,7 @@ class User(UserMixin, db.Model):
             "role": self.role,
             "is_active": self.is_active,
             "is_verified": self.is_verified,
+            "avatar_path": self.avatar_path,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
         }

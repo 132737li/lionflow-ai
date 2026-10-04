@@ -2,6 +2,7 @@
 CRUD des comptes WhatsApp + test de connexion + webhook Meta.
 Multi-tenant : filtré par business_id.
 Pays par défaut : Burundi (+257). Tous les pays acceptés.
+Intégration chatbot : les messages entrants sont traités automatiquement.
 """
 import json
 import hmac
@@ -20,6 +21,7 @@ from app.models.whatsapp_account import WhatsAppAccount
 from app.models.message import Message
 from app.services.whatsapp_service import WhatsAppService
 from app.services.notification_service import NotificationService
+from app.services.chatbot_service import ChatbotService
 from app.utils.decorators import require_business, get_current_business
 from app.utils.security import log_activity
 from app.utils.validators import normalize_phone
@@ -281,7 +283,7 @@ def webhook_receive():
 
 
 # ==================================================
-# HANDLERS INTERNES
+# HANDLER — STATUTS DE MESSAGE (delivered, read, failed)
 # ==================================================
 def _handle_status_update(status: dict) -> None:
     external_id = status.get("id")
@@ -321,25 +323,47 @@ def _handle_status_update(status: dict) -> None:
         )
 
 
+# ==================================================
+# HANDLER — MESSAGES ENTRANTS (avec chatbot)
+# ==================================================
 def _handle_incoming_message(msg: dict, value: dict) -> None:
+    """
+    Traite un message entrant :
+    1. Identifie l'entreprise et le contact via le phone_number_id
+    2. Passe le message au ChatbotService pour réponse automatique
+    3. Log l'activité
+    """
     sender = msg.get("from")
     text = (msg.get("text") or {}).get("body", "")
     if not sender:
         return
 
+    # Trouver le compte WhatsApp par phone_number_id
     phone_number_id = (value.get("metadata") or {}).get("phone_number_id")
     account = None
     if phone_number_id:
-        account = WhatsAppAccount.query.filter_by(phone_number_id=phone_number_id).first()
-
-    contact = None
-    if account:
-        from app.models.contact import Contact
-        normalized = f"+{sender}" if not sender.startswith("+") else sender
-        contact = Contact.query.filter_by(
-            business_id=account.business_id, phone=normalized
+        account = WhatsAppAccount.query.filter_by(
+            phone_number_id=phone_number_id
         ).first()
 
+    if not account:
+        # Aucun compte reconnu → on log mais on ne peut pas router
+        log_activity(
+            action="waba_incoming_unknown",
+            description=f"Message entrant d'un phone_number_id inconnu ({phone_number_id})",
+        )
+        return
+
+    business = account.business
+
+    # Chercher le contact dans cette entreprise
+    from app.models.contact import Contact
+    normalized = f"+{sender}" if not sender.startswith("+") else sender
+    contact = Contact.query.filter_by(
+        business_id=business.id, phone=normalized
+    ).first()
+
+    # Log du message entrant
     log_activity(
         action="waba_incoming",
         description=(
@@ -347,18 +371,41 @@ def _handle_incoming_message(msg: dict, value: dict) -> None:
             + (f" ({contact.full_name})" if contact else "")
             + f" : {text[:120]}"
         ),
-        user_id=account.business.owner_id if account else None,
+        user_id=business.owner_id,
     )
 
-    if account:
-        NotificationService.notify(
-            user_id=account.business.owner_id,
-            title="Nouveau message WhatsApp",
-            message=f"{contact.full_name if contact else sender} : {text[:120]}",
-            type="info",
-        )
+    # Notification à l'utilisateur
+    NotificationService.notify(
+        user_id=business.owner_id,
+        title="Nouveau message WhatsApp",
+        message=f"{contact.full_name if contact else sender} : {text[:120]}",
+        type="info",
+    )
+
+    # 🤖 Passer au chatbot pour réponse automatique
+    if text:
+        try:
+            result = ChatbotService.process_incoming_message(
+                business=business,
+                contact=contact,
+                message_text=text,
+                whatsapp_account=account,
+                sender_phone=sender,
+            )
+
+            current_app.logger.info(
+                f"[Chatbot] Message traité : action={result.get('action')} "
+                f"conversation_id={result.get('conversation_id')}"
+            )
+        except Exception:
+            current_app.logger.exception(
+                "[Chatbot] Erreur lors du traitement du message entrant"
+            )
 
 
+# ==================================================
+# SÉCURITÉ — VÉRIFICATION DE SIGNATURE
+# ==================================================
 def _verify_signature_if_configured() -> None:
     app_secret = current_app.config.get("WHATSAPP_APP_SECRET")
     if not app_secret:

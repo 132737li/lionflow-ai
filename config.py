@@ -12,7 +12,6 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 class Config:
     """Configuration commune à tous les environnements."""
-    WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 
     # --- Flask ---
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
@@ -33,7 +32,7 @@ class Config:
     # --- Sessions ---
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
-    SESSION_COOKIE_SECURE = False  # True en prod HTTPS
+    SESSION_COOKIE_SECURE = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
@@ -49,13 +48,25 @@ class Config:
 
     # --- CSRF ---
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = None  # lié à la session
+    WTF_CSRF_TIME_LIMIT = None
 
     # --- Upload ---
     UPLOAD_FOLDER = os.path.join(BASE_DIR, os.getenv("UPLOAD_FOLDER", "app/static/uploads"))
     MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "5")) * 1024 * 1024
     ALLOWED_UPLOAD_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
     ALLOWED_IMPORT_EXTENSIONS = {"csv", "xlsx", "xls"}
+
+    # --- Médias (campagnes WhatsApp) ---
+    ALLOWED_MEDIA_IMAGE_EXT = {"jpg", "jpeg", "png", "webp"}
+    ALLOWED_MEDIA_DOC_EXT = {"pdf"}
+    ALLOWED_MEDIA_VIDEO_EXT = {"mp4", "3gp"}
+
+    MAX_MEDIA_SIZE_MB = int(os.getenv("MAX_MEDIA_SIZE_MB", "16"))   # WhatsApp : 16 Mo
+    MAX_MEDIA_SIZE_IMAGE_MB = 5
+    MAX_MEDIA_SIZE_VIDEO_MB = 16
+    MAX_MEDIA_SIZE_DOC_MB = 100
+
+    MEDIA_UPLOAD_FOLDER = os.path.join(BASE_DIR, "app/static/uploads/media")
 
     # --- WhatsApp ---
     WHATSAPP_ACCESS_TOKEN = os.getenv("WHATSAPP_ACCESS_TOKEN", "")
@@ -64,27 +75,50 @@ class Config:
     WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "lionflow-verify-token")
     WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v20.0")
     WHATSAPP_DEV_MODE = os.getenv("WHATSAPP_DEV_MODE", "1") == "1"
-
-    # --- Stripe ---
+    WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
+    
+    # --- Paiement ---
+    PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "")
+    PAYMENT_API_URL = os.getenv("PAYMENT_API_URL", "")
+    PAYMENT_API_KEY = os.getenv("PAYMENT_API_KEY", "")
+    PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
+    PAYMENT_SUCCESS_URL = os.getenv("PAYMENT_SUCCESS_URL", "")
     STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-    # --- Email ---
-    MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", "1025"))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "0") == "1"
+    # --- Email (Gmail SMTP) ---
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "1") == "1"
+    MAIL_USE_SSL = os.getenv("MAIL_USE_SSL", "0") == "1"
     MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")
-    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@lionflow.ai")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "")
+    MAIL_SUPPRESS_SEND = False
+    MAIL_DEBUG = False
+    MAIL_MAX_EMAILS = None
+    MAIL_ASCII_ATTACHMENTS = False
+    
+    # --- Notifications Push (VAPID) ---
+    VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+    VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+    VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:admin@lionflow.ai")
+
 
     # --- Scheduler ---
     SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "1") == "1"
 
     # --- Pagination ---
     ITEMS_PER_PAGE = 20
+    
+    # --- IA (chatbot) ---
+    # Limite globale par défaut (si non configurée par entreprise)
+    AI_DEFAULT_MAX_REQUESTS_MONTH = int(os.getenv("AI_DEFAULT_MAX_REQUESTS_MONTH", "1000"))
+    # Timeout des appels API IA
+    AI_REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "30"))
 
-    # --- Plans d'abonnement (limites configurables) ---
+    # --- Plans d'abonnement ---
     PLANS = {
         "free": {
             "label": "Free",
@@ -130,6 +164,7 @@ class TestingConfig(Config):
     SCHEDULER_ENABLED = False
     JWT_SECRET_KEY = "test-jwt-secret-key-with-minimum-32-bytes-for-hmac-sha256"
     SECRET_KEY = "test-secret-key-with-minimum-32-bytes-for-hmac-sha256"
+    MAIL_SUPPRESS_SEND = True
 
 
 class ProductionConfig(Config):

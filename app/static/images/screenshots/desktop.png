@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- saved from url=(0041)http://localhost:5000/auth/login?next=%2F -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <title>Connexion — LionFlow AI</title>
+
+    <!-- ============ PWA ============ -->
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="LionFlow">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="LionFlow AI">
+    <meta name="description" content="Plateforme SaaS de gestion WhatsApp">
+
+    <!-- Manifest -->
+    <link rel="manifest" href="http://localhost:5000/manifest.json">
+
+    <!-- Favicon & icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="http://localhost:5000/static/images/icon-96x96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="http://localhost:5000/static/images/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="http://localhost:5000/static/images/apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="http://localhost:5000/static/images/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="http://localhost:5000/static/images/icon-512x512.png">
+
+    <!-- Bootstrap 5 -->
+    <link href="./desktop_files/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="./desktop_files/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./desktop_files/style.css">
+
+    
+</head>
+<body>
+
+
+<!-- ================= LAYOUT NON CONNECTÉ ================= -->
+<main class="lf-auth-wrapper">
+    <div class="container">
+        
+            
+                
+                
+                
+            
+        
+        
+<div class="row justify-content-center align-items-center min-vh-100">
+    <div class="col-md-6 col-lg-4">
+        <div class="text-center mb-4">
+            <img src="./desktop_files/logo.png" alt="LionFlow AI" class="lf-logo-badge">
+            <h1 class="h3 mt-3 mb-1">LionFlow AI</h1>
+            <p class="text-muted">Connectez-vous à votre espace</p>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="POST" novalidate="">
+                    <input id="csrf_token" name="csrf_token" type="hidden" value="IjJhYTRkNTJjN2I5MDA5MTAyM2NiODdmNzZjNDZhOWI1NDY3NmEwM2Qi.arl6vw.aX-1ekefZ_Jv5UrGVMh1CwnjoWo">
+
+                    <div class="mb-3">
+                        <label class="form-label" for="email">Email</label>
+                        <input autocomplete="email" class="form-control" id="email" maxlength="255" name="email" placeholder="vous@exemple.com" required="" type="text" value="">
+                        
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label class="form-label" for="password">Mot de passe</label>
+                            <a href="http://localhost:5000/auth/forgot-password" class="small text-decoration-none">
+                                Mot de passe oublié ?
+                            </a>
+                        </div>
+                        <input autocomplete="current-password" class="form-control" id="password" name="password" required="" type="password" value="">
+                        
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" id="remember" name="remember" type="checkbox" value="y">
+                        <label class="form-check-label" for="remember">Se souvenir de moi</label>
+                    </div>
+
+                    <input class="btn btn-primary w-100" id="submit" name="submit" type="submit" value="Se connecter">
+                </form>
+            </div>
+        </div>
+
+        <p class="text-center mt-4 mb-0 text-muted">
+            Pas encore de compte ?
+            <a href="http://localhost:5000/auth/register" class="text-decoration-none">Créer un compte</a>
+        </p>
+    </div>
+</div>
+
+    </div>
+</main>
+
+
+<!-- Scripts -->
+<script src="./desktop_files/bootstrap.bundle.min.js.téléchargement"></script>
+<script src="./desktop_files/chart.umd.min.js.téléchargement"></script>
+<script src="./desktop_files/app.js.téléchargement"></script>
+
+<!-- ============ PWA Service Worker ============ -->
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then((registration) => {
+                console.log('[PWA] Service Worker enregistre:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('[PWA] Erreur Service Worker:', error);
+            });
+    });
+}
+</script>
+
+
+
+</body></html>
