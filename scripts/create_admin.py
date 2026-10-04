@@ -34,8 +34,8 @@ def main():
 
         user = User(
             email=email,
-            first_name="Léon",
-            last_name="Corazón",
+            last_name="Léon",
+            first_name="Corazón",
             role="admin",
             is_active=True,
             is_verified=True,
