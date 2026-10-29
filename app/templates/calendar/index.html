@@ -1,0 +1,164 @@
+{# LionFlow AI — Calendrier visuel des campagnes #} {% extends "base.html" %} {%
+block title %}{{ t('calendar.title') }} — LionFlow AI{% endblock %} {% block
+head %}
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/calendar.css') }}"
+/>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  {# --- En-tête --- #}
+  <div
+    class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3"
+  >
+    <div>
+      <h1 class="h3 mb-1">
+        <i class="bi bi-calendar3"></i>
+        {{ t('calendar.title') }}
+      </h1>
+      <p class="text-muted mb-0">{{ t('calendar.subtitle') }}</p>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <select
+        id="calendarStatusFilter"
+        class="form-select form-select-sm"
+        style="min-width: 200px"
+        aria-label="{{ t('calendar.filter_status') }}"
+      >
+        <option value="">{{ t('calendar.all_statuses') }}</option>
+        <option value="draft">{{ t('status.draft') }}</option>
+        <option value="scheduled">{{ t('status.scheduled') }}</option>
+        <option value="running">{{ t('status.running') }}</option>
+        <option value="paused">{{ t('status.paused') }}</option>
+        <option value="completed">{{ t('status.completed') }}</option>
+        <option value="cancelled">{{ t('status.cancelled') }}</option>
+      </select>
+
+      <a
+        href="{{ url_for('campaigns.create_campaign') }}"
+        class="btn btn-primary btn-sm"
+      >
+        <i class="bi bi-plus-lg"></i>
+        {{ t('calendar.new_campaign') }}
+      </a>
+
+      <a
+        href="{{ url_for('campaigns.list_campaigns') }}"
+        class="btn btn-outline-secondary btn-sm"
+      >
+        <i class="bi bi-list-ul"></i>
+        {{ t('calendar.list_view') }}
+      </a>
+    </div>
+  </div>
+
+  {# --- Légende --- #}
+  <div class="d-flex flex-wrap gap-3 mb-3 small text-muted">
+    <span
+      ><span class="badge rounded-pill" style="background: #6c757d"
+        >&nbsp;</span
+      >
+      {{ t('status.draft') }}</span
+    >
+    <span
+      ><span class="badge rounded-pill" style="background: #0d6efd"
+        >&nbsp;</span
+      >
+      {{ t('status.scheduled') }}</span
+    >
+    <span
+      ><span class="badge rounded-pill" style="background: #fd7e14"
+        >&nbsp;</span
+      >
+      {{ t('status.running') }}</span
+    >
+    <span
+      ><span class="badge rounded-pill" style="background: #ffc107"
+        >&nbsp;</span
+      >
+      {{ t('status.paused') }}</span
+    >
+    <span
+      ><span class="badge rounded-pill" style="background: #198754"
+        >&nbsp;</span
+      >
+      {{ t('status.completed') }}</span
+    >
+    <span
+      ><span class="badge rounded-pill" style="background: #adb5bd"
+        >&nbsp;</span
+      >
+      {{ t('status.cancelled') }}</span
+    >
+  </div>
+
+  {# --- Zone du Calendrier avec Loader --- #}
+  <div class="position-relative">
+    {# Écran de chargement (s'affiche par-dessus tant que le calendrier charge)
+    #}
+    <div
+      id="calendarLoader"
+      class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center"
+      style="
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 10;
+        border-radius: 0.75rem;
+        backdrop-filter: blur(2px);
+        display: none !important;
+      "
+    >
+      <div
+        class="spinner-border text-success mb-3"
+        role="status"
+        style="width: 3rem; height: 3rem"
+      ></div>
+      <h5 class="text-success fw-bold">Chargement du calendrier...</h5>
+    </div>
+
+    {# Le calendrier #}
+    <div
+      id="campaignCalendar"
+      data-events-url="{{ url_for('calendar.api_events') }}"
+      data-reschedule-url-template="{{ url_for('calendar.api_reschedule', campaign_id=0) }}"
+    ></div>
+  </div>
+
+  <p class="text-muted small mt-3 mb-0">
+    <i class="bi bi-info-circle"></i>
+    {{ t('calendar.tip_drag_drop') }}
+  </p>
+</div>
+
+<script>
+  window.LF_I18N = {
+    calendar: {
+      btn_today: {{ t('calendar.btn_today')|tojson }},
+      btn_month: {{ t('calendar.btn_month')|tojson }},
+      btn_week: {{ t('calendar.btn_week')|tojson }},
+      btn_day: {{ t('calendar.btn_day')|tojson }},
+      btn_list: {{ t('calendar.btn_list')|tojson }},
+      rescheduled_success: {{ t('calendar.rescheduled_success')|tojson }},
+      reschedule_failed: {{ t('calendar.reschedule_failed')|tojson }},
+      load_failed: {{ t('calendar.load_failed')|tojson }},
+      network_error: {{ t('calendar.network_error')|tojson }},
+    },
+    status: {
+      draft: {{ t('status.draft')|tojson }},
+      scheduled: {{ t('status.scheduled')|tojson }},
+      running: {{ t('status.running')|tojson }},
+      paused: {{ t('status.paused')|tojson }},
+      completed: {{ t('status.completed')|tojson }},
+      cancelled: {{ t('status.cancelled')|tojson }},
+    },
+    locale: {{ current_language|tojson }},
+  };
+</script>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}

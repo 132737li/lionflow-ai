@@ -4,9 +4,11 @@ Usage :
   flask create-admin --email admin@lionflow.ai --password secret
   flask seed-plans
   flask seed-demo
+  flask send-update
 """
 import click
 from flask.cli import with_appcontext
+from flask import current_app
 
 from app.extensions import db
 from app.models.user import User
@@ -93,3 +95,43 @@ def register_cli(app):
 
         db.session.commit()
         click.echo("🎉 Seed terminé.")
+
+    # ==================================================
+    # ✅ NOUVELLE COMMANDE : Envoi d'annonces / mises à jour
+    # ==================================================
+    @app.cli.command("send-update")
+    @click.option("--title", prompt="Titre de l'annonce", help="Ex: Nouvelle fonctionnalité d'export PDF")
+    @click.option("--message", prompt="Message de l'annonce", help="Détails de la mise à jour")
+    @click.option("--cta-text", default="Découvrir", prompt="Texte du bouton", help="Ex: Voir les nouveautés")
+    @click.option("--cta-url", default="http://localhost:5000", prompt="Lien du bouton", help="Où mène le bouton ?")
+    @with_appcontext
+    def send_update(title, message, cta_text, cta_url):
+        """Envoie un email d'annonce de mise à jour à tous les utilisateurs actifs."""
+        from app.services.email_service import EmailService
+        
+        users = User.query.filter_by(is_active=True).all()
+        total = len(users)
+        
+        if total == 0:
+            click.echo("❌ Aucun utilisateur actif trouvé.")
+            return
+            
+        click.echo(f"⏳ Envoi de l'annonce '{title}' à {total} utilisateur(s)...")
+        
+        success = 0
+        errors = 0
+        
+        # ✅ CORRECTION : Création d'un contexte de requête factice
+        # Cela permet à render_template de fonctionner sans navigateur
+        with current_app.test_request_context():
+            for u in users:
+                try:
+                    if EmailService.send_update_notification(u, title, message, cta_text, cta_url):
+                        success += 1
+                    else:
+                        errors += 1
+                except Exception as e:
+                    click.echo(f"❌ Erreur pour {u.email} : {e}")
+                    errors += 1
+                
+        click.echo(f"\n✅ Terminé ! {success} email(s) envoyé(s) avec succès, {errors} échec(s).")

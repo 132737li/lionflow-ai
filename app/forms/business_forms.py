@@ -8,6 +8,27 @@ from wtforms.validators import DataRequired, Optional, Length, ValidationError
 
 from app.utils.validators import is_valid_email, normalize_phone
 
+class BusinessForm(FlaskForm):
+    name = StringField("Nom de l'entreprise", validators=[DataRequired()])
+    
+    # Exemple de champ pays (à adapter selon ton code actuel)
+    country_code = SelectField(
+        "Pays",
+        choices=[
+            ("BI", "🇧🇮 Burundi (+257)"),
+            ("FR", "🇫🇷 France (+33)"),
+            ("CD", "🇨🇩 RD Congo (+243)"),
+            ("RW", "🇷🇼 Rwanda (+250)"),
+            ("OTHER", "Autre")
+        ],
+        default="BI"
+    )
+    
+    phone = StringField("Téléphone", validators=[
+        # On ne met pas de validateur strict ici, on le fait dans la route avec normalize_phone
+    ])
+    
+    # ... tes autres champs (email, adresse, etc.)
 
 # 🌍 Liste des pays (Burundi par défaut)
 COUNTRY_CHOICES = [
@@ -68,6 +89,21 @@ class BusinessForm(FlaskForm):
     )
     logo = FileField("Logo (png, jpg, jpeg, gif, webp — max 5 Mo)")
     submit = SubmitField("Enregistrer")
+    app_name = StringField(
+        "Nom de l'application (White-Label)",
+        validators=[Optional(), Length(max=100)],
+        description="Laissez vide pour utiliser LionFlow AI"
+    )
+    primary_color = StringField(
+        "Couleur principale",
+        validators=[Optional(), Length(max=7)],
+        default="#10b981"
+    )
+    secondary_color = StringField(
+        "Couleur secondaire",
+        validators=[Optional(), Length(max=7)],
+        default="#0ea5e9"
+    )
 
     def validate_email(self, field):
         if field.data and not is_valid_email(field.data):

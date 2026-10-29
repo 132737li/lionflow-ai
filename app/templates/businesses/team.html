@@ -1,0 +1,127 @@
+{% extends "base.html" %} {% block title %}Gestion de l'équipe — {{
+business.name }}{% endblock %} {% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-people"></i> Équipe de {{ business.name }}
+    </h1>
+    <a
+      href="{{ url_for('businesses.list_businesses') }}"
+      class="btn btn-outline-secondary"
+    >
+      <i class="bi bi-arrow-left"></i> Retour
+    </a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %} {% for category, msg in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
+
+  <div class="row g-4">
+    <!-- Liste des membres -->
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Membres actuels</h5>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Utilisateur</th>
+                <th>Rôle actuel</th>
+                <th>Demander un changement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for member in members %}
+              <tr>
+                <td>
+                  {{ member.user.full_name }}<br />
+                  <small class="text-muted">{{ member.user.email }}</small>
+                </td>
+                <td>
+                  {% if member.role == 'owner' %}<span class="badge bg-dark"
+                    >Propriétaire</span
+                  >
+                  {% elif member.role == 'admin' %}<span class="badge bg-danger"
+                    >Admin</span
+                  >
+                  {% elif member.role == 'editor' %}<span
+                    class="badge bg-warning text-dark"
+                    >Éditeur</span
+                  >
+                  {% else %}<span class="badge bg-secondary">Lecteur</span>{%
+                  endif %}
+                </td>
+                <td>
+                  {% if member.role != 'owner' and member.user_id !=
+                  current_user.id %}
+                  <form
+                    action="{{ url_for('businesses.request_role', business_id=business.id, user_id=member.user_id) }}"
+                    method="POST"
+                    class="d-flex gap-2"
+                  >
+                    <input
+                      type="hidden"
+                      name="csrf_token"
+                      value="{{ csrf_token() }}"
+                    />
+                    <select
+                      name="new_role"
+                      class="form-select form-select-sm"
+                      style="width: auto"
+                    >
+                      <option value="viewer">Lecteur</option>
+                      <option value="editor">Éditeur</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button class="btn btn-sm btn-outline-primary">
+                      Demander
+                    </button>
+                  </form>
+                  {% else %}
+                  <span class="text-muted small">Aucune action</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ajouter un membre -->
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Ajouter un membre</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="mb-3">
+              <label class="form-label">Email de l'utilisateur</label>
+              <input
+                type="email"
+                name="email"
+                class="form-control"
+                placeholder="collaborateur@exemple.com"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-person-plus"></i> Ajouter
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

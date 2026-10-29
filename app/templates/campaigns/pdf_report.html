@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+      }
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        color: #333;
+        font-size: 11pt;
+      }
+      .header {
+        text-align: center;
+        border-bottom: 2px solid #0d6efd;
+        padding-bottom: 10px;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        color: #0d6efd;
+        margin: 0;
+        font-size: 24pt;
+      }
+      .header p {
+        margin: 5px 0 0 0;
+        color: #666;
+      }
+      .title {
+        text-align: center;
+        font-size: 18pt;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+      .info-table {
+        width: 100%;
+        margin-bottom: 30px;
+        border-collapse: collapse;
+      }
+      .info-table td {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+      }
+      .info-table td.label {
+        font-weight: bold;
+        color: #555;
+        width: 40%;
+      }
+      .stats-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 30px;
+      }
+      .stats-box h3 {
+        margin-top: 0;
+        color: #0d6efd;
+        font-size: 14pt;
+        text-align: center;
+      }
+      .stats-grid {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .stats-grid th,
+      .stats-grid td {
+        text-align: center;
+        padding: 10px;
+        border: 1px solid #dee2e6;
+      }
+      .stats-grid th {
+        background-color: #e9ecef;
+        font-weight: bold;
+      }
+      .stats-grid td.value {
+        font-size: 16pt;
+        font-weight: bold;
+      }
+      .text-success {
+        color: #198754;
+      }
+      .text-danger {
+        color: #dc3545;
+      }
+      .text-primary {
+        color: #0d6efd;
+      }
+      .footer {
+        margin-top: 50px;
+        text-align: center;
+        font-size: 9pt;
+        color: #999;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>LionFlow AI</h1>
+      <p>Rapport de Campagne WhatsApp</p>
+    </div>
+
+    <div class="title">{{ campaign.name }}</div>
+
+    <table class="info-table">
+      <tr>
+        <td class="label">Entreprise :</td>
+        <td>{{ business.name }}</td>
+      </tr>
+      <tr>
+        <td class="label">Statut de la campagne :</td>
+        <td>{{ campaign.status|upper }}</td>
+      </tr>
+      <tr>
+        <td class="label">Date de création :</td>
+        <td>
+          {{ campaign.created_at.strftime('%d/%m/%Y à %H:%M') if
+          campaign.created_at else '-' }}
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Date de lancement :</td>
+        <td>
+          {{ campaign.started_at.strftime('%d/%m/%Y à %H:%M') if
+          campaign.started_at else '-' }}
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Date de fin :</td>
+        <td>
+          {{ campaign.finished_at.strftime('%d/%m/%Y à %H:%M') if
+          campaign.finished_at else '-' }}
+        </td>
+      </tr>
+      <tr>
+        <td class="label">Contacts ciblés :</td>
+        <td>{{ campaign.total_contacts }}</td>
+      </tr>
+    </table>
+
+    <div class="stats-box">
+      <h3>Résultats de la campagne</h3>
+      <table class="stats-grid">
+        <tr>
+          <th>Envoyés</th>
+          <th>Livrés</th>
+          <th>Lus</th>
+          <th>Échecs</th>
+        </tr>
+        <tr>
+          <td class="value text-primary">{{ campaign.sent_count }}</td>
+          <td class="value text-primary">{{ campaign.delivered_count }}</td>
+          <td class="value text-success">{{ campaign.read_count }}</td>
+          <td class="value text-danger">{{ campaign.failed_count }}</td>
+        </tr>
+      </table>
+
+      <p style="text-align: center; margin-top: 15px">
+        <strong>Taux d'avancement :</strong> {{ campaign.progress_pct }}%
+      </p>
+    </div>
+
+    <div class="footer">
+      Généré le {{ now.strftime('%d/%m/%Y à %H:%M') }} par LionFlow AI.<br />
+      Ce document est confidentiel et destiné à l'usage exclusif de {{
+      business.name }}.<br />
+      Page <pdf:pagenumber /> sur <pdf:pagecount />
+    </div>
+  </body>
+</html>

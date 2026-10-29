@@ -34,6 +34,7 @@ class Campaign(db.Model):
     __tablename__ = "campaigns"
     __table_args__ = (
         db.Index("idx_campaign_business_status", "business_id", "status"),
+        db.Index("idx_campaign_scheduled_at", "scheduled_at"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
@@ -51,6 +52,13 @@ class Campaign(db.Model):
     db.Integer,
     db.ForeignKey("whatsapp_accounts.id", ondelete="SET NULL"),
     )
+    telegram_account_id = db.Column(
+    db.Integer,
+    db.ForeignKey("telegram_accounts.id", ondelete="SET NULL"),
+    )
+    # ... n'oublie pas d'ajouter la relation :
+    
+    telegram_account = db.relationship("TelegramAccount")
     # 📎 Média associé (image, PDF, vidéo)
     media_file_id = db.Column(
         db.Integer,
@@ -73,6 +81,20 @@ class Campaign(db.Model):
     timezone = db.Column(db.String(64), default="UTC")
     started_at = db.Column(db.DateTime)
     finished_at = db.Column(db.DateTime)
+    
+    # ✅ NOUVEAU : A/B Testing
+    is_ab_test = db.Column(db.Boolean, nullable=False, default=False)
+    message_b = db.Column(db.Text)
+
+    # ✅ NOUVEAU : Relances automatiques
+    follow_up_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    follow_up_delay_hours = db.Column(db.Integer, nullable=False, default=24)
+    follow_up_message = db.Column(db.Text)
+    follow_up_template_id = db.Column(
+        db.Integer,
+        db.ForeignKey("templates.id", ondelete="SET NULL"),
+    )
+    follow_up_sent_at = db.Column(db.DateTime)
 
     total_contacts = db.Column(db.Integer, nullable=False, default=0)
     sent_count = db.Column(db.Integer, nullable=False, default=0)
@@ -85,7 +107,18 @@ class Campaign(db.Model):
 
     # ----- Relations -----
     business = db.relationship("Business", back_populates="campaigns")
-    template = db.relationship("Template", back_populates="campaigns")
+    
+    # ✅ CORRECTION : foreign_keys explicites pour éviter l'ambiguïté
+    template = db.relationship(
+        "Template", 
+        foreign_keys=[template_id], 
+        back_populates="campaigns"
+    )
+    follow_up_template = db.relationship(
+        "Template", 
+        foreign_keys=[follow_up_template_id]
+    )
+    
     whatsapp_account = db.relationship("WhatsAppAccount", back_populates="campaigns")
     media_file = db.relationship("MediaFile", foreign_keys=[media_file_id])
     messages = db.relationship(

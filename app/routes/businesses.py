@@ -15,11 +15,39 @@ from app.extensions import db
 from app.forms.business_forms import BusinessForm
 from app.models.business import Business
 from app.models.subscription import Subscription
+from app.models.business_member import BusinessMember
+from app.models.role_change_request import RoleChangeRequest
+from app.models.user import User
+from app.services.member_service import MemberService
 from app.utils.security import log_activity
 from app.utils.validators import allowed_file, normalize_phone
+from app.utils.decorators import require_business, get_current_business
 
 
 businesses_bp = Blueprint("businesses", __name__, template_folder="../templates/businesses")
+
+
+# ==================================================
+# HELPERS
+# ==================================================
+def _merge_country_and_phone(country_code: str, raw_phone: str) -> str | None:
+    """
+    Fusionne intelligemment le pays et le numéro.
+    - Si le numéro a un '+', il est prioritaire (ex: +33...).
+    - Sinon, on utilise le pays sélectionné (ou BI).
+    """
+    if not raw_phone:
+        return None
+        
+    raw = str(raw_phone).strip()
+    
+    # Si l'utilisateur a déjà tapé un format international (+...)
+    if raw.startswith("+"):
+        return normalize_phone(raw) # Pas besoin de default_region
+        
+    # Sinon, on préfixe avec le pays choisi
+    region = country_code if country_code and country_code != "OTHER" else "BI"
+    return normalize_phone(raw, default_region=region)
 
 
 def _save_logo(file_storage, business_id: int) -> str | None:
@@ -37,19 +65,6 @@ def _save_logo(file_storage, business_id: int) -> str | None:
     path = os.path.join(folder, filename)
     file_storage.save(path)
     return f"uploads/logos/{filename}"
-
-
-def _merge_country_and_phone(country_code: str, raw_phone: str) -> str | None:
-    """Fusionne indicatif pays + numéro."""
-    if not raw_phone:
-        return None
-    raw = str(raw_phone).strip()
-    if raw.startswith("+"):
-        return normalize_phone(raw, default_region="BI")
-    region = country_code or "BI"
-    if region == "OTHER":
-        region = "BI"
-    return normalize_phone(raw, default_region=region)
 
 
 # ==================================================
@@ -89,6 +104,10 @@ def create_business():
             phone=final_phone,
             address=(form.address.data or "").strip() or None,
             country=form.country.data or "BI",
+            # ✅ NOUVEAU
+            app_name=(form.app_name.data or "").strip() or None,
+            primary_color=form.primary_color.data or "#10b981",
+            secondary_color=form.secondary_color.data or "#0ea5e9",
         )
         db.session.add(business)
         db.session.flush()
@@ -149,7 +168,10 @@ def edit_business(business_id: int):
         business.phone = final_phone
         business.address = (form.address.data or "").strip() or None
         business.country = form.country.data or "BI"
-
+        # ✅ NOUVEAU
+        business.app_name = (form.app_name.data or "").strip() or None
+        business.primary_color = form.primary_color.data or "#10b981"
+        business.secondary_color = form.secondary_color.data or "#0ea5e9"
         logo_path = _save_logo(form.logo.data, business.id)
         if logo_path:
             business.logo_path = logo_path
@@ -203,3 +225,52 @@ def switch_business(business_id: int):
     session["active_business_id"] = business.id
     flash(f"Entreprise active : {business.name}", "success")
     return redirect(request.referrer or url_for("dashboard.index"))
+
+
+# ==================================================
+# GESTION DE L'ÉQUIPE
+# ==================================================
+@businesses_bp.route("/<int:business_id>/team", methods=["GET", "POST"])
+@login_required
+def team(business_id):
+    # ✅ CORRECTION : On cherche l'entreprise par son ID en vérifiant que tu en es le propriétaire
+    business = Business.query.filter_by(
+        id=business_id, owner_id=current_user.id
+    ).first_or_404()
+
+    members = BusinessMember.query.filter_by(business_id=business.id).all()
+
+    if request.method == "POST":
+        email = request.form.get("email")
+        try:
+            MemberService.add_member(business, email, role="viewer")
+            flash("Membre ajouté avec succès (rôle par défaut : Lecteur).", "success")
+            return redirect(url_for("businesses.team", business_id=business.id))
+        except ValueError as e:
+            flash(str(e), "danger")
+
+    return render_template("businesses/team.html", business=business, members=members)
+
+
+@businesses_bp.route("/<int:business_id>/team/<int:user_id>/request-role", methods=["POST"])
+@login_required
+def request_role(business_id, user_id):
+    # ✅ CORRECTION : Même logique ici
+    business = Business.query.filter_by(
+        id=business_id, owner_id=current_user.id
+    ).first_or_404()
+    
+    target_user = User.query.get_or_404(user_id)
+    new_role = request.form.get("new_role")
+
+    if new_role not in ("admin", "editor", "viewer"):
+        flash("Rôle invalide.", "danger")
+        return redirect(url_for("businesses.team", business_id=business.id))
+
+    try:
+        MemberService.request_role_change(business, target_user, new_role, current_user)
+        flash("Demande envoyée au Super Admin pour approbation.", "info")
+    except ValueError as e:
+        flash(str(e), "danger")
+
+    return redirect(url_for("businesses.team", business_id=business.id))

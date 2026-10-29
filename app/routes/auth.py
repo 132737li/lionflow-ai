@@ -4,7 +4,8 @@ Sessions gérées par Flask-Login, CSRF par Flask-WTF.
 """
 import os
 import secrets
-from datetime import datetime
+from app.models.user import User
+from datetime import datetime, timezone
 from urllib.parse import urlparse, urljoin
 
 from flask import (
@@ -18,6 +19,7 @@ from app.forms.auth_forms import (
     ResetPasswordForm, ChangePasswordForm, ProfileForm,
 )
 from app.services.auth_service import AuthService, AuthError
+from app.services.email_service import EmailService  # 👈 IMPORT AJOUTÉ
 from app.extensions import db
 from app.utils.validators import allowed_file
 from app.utils.security import log_activity
@@ -48,15 +50,17 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
         try:
-            user = AuthService.register(
-                {
-                    "email": form.email.data,
-                    "password": form.password.data,
-                    "first_name": form.first_name.data,
-                    "last_name": form.last_name.data,
-                }
-            )
-            flash("Votre compte a été créé avec succès. Connectez-vous.", "success")
+            # ✅ CORRECTION : On passe un vrai dictionnaire au lieu des "..."
+            new_user = AuthService.register({
+                "email": form.email.data,
+                "password": form.password.data,
+                "first_name": form.first_name.data,
+                "last_name": form.last_name.data,
+            })
+            
+            # ✅ L'email de vérification est maintenant géré directement par AuthService.register()
+            
+            flash("Votre compte a été créé. Veuillez vérifier votre boîte email pour l'activer.", "info")
             return redirect(url_for("auth.login"))
         except AuthError as e:
             flash(e.message, "danger")
@@ -90,11 +94,13 @@ def login():
             if nxt and _is_safe_url(nxt):
                 return redirect(nxt)
             return redirect(url_for("dashboard.index"))
+            
         except AuthError as e:
+            # ✅ CORRECTION : On a supprimé la vérification 'is_verified' qui était ici.
+            # C'est AuthService.authenticate() qui gère le blocage et renvoie le bon message.
             flash(e.message, "danger")
 
     return render_template("auth/login.html", form=form)
-
 # ==================================================
 # DÉCONNEXION
 # ==================================================
@@ -240,7 +246,7 @@ def edit_profile():
             current_user.avatar_path = avatar_path
 
         db.session.commit()
-
+        
         log_activity(
             action="profile_update",
             description=f"Profil modifié : {current_user.email}",
@@ -277,3 +283,81 @@ def delete_avatar():
         flash("Photo de profil supprimée.", "info")
 
     return redirect(url_for("auth.profile"))
+
+# ==================================================
+# UPLOAD DE THÈME PERSONNALISÉ
+# ==================================================
+@auth_bp.route("/theme/upload", methods=["POST"])
+@login_required
+def upload_theme():
+    if "theme_image" not in request.files:
+        flash("Aucune image sélectionnée.", "warning")
+        return redirect(request.referrer or url_for("dashboard.index"))
+
+    file = request.files["theme_image"]
+    if file.filename == "":
+        flash("Aucun fichier sélectionné.", "warning")
+        return redirect(request.referrer or url_for("dashboard.index"))
+
+    if not allowed_file(file.filename, current_app.config["ALLOWED_UPLOAD_EXTENSIONS"]):
+        flash("Format d'image non autorisé (JPG, PNG, WEBP).", "danger")
+        return redirect(request.referrer or url_for("dashboard.index"))
+
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    filename = f"theme_{current_user.id}_{secrets.token_hex(6)}.{ext}"
+    
+    # ✅ On sauvegarde dans static/uploads/themes/
+    folder = os.path.join(current_app.static_folder, "uploads", "themes")
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, filename)
+    
+    # Supprime l'ancienne image si elle existe
+    if current_user.custom_theme_path:
+        old_path = os.path.join(current_app.static_folder, current_user.custom_theme_path.replace("uploads/", ""))
+        try:
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        except OSError:
+            pass
+
+    file.save(path)
+    current_user.custom_theme_path = f"uploads/themes/{filename}"
+    db.session.commit()
+
+    flash("Image de fond mise à jour !", "success")
+    return redirect(request.referrer or url_for("dashboard.index"))
+
+# ==================================================
+# SUPPRIMER LE THÈME PERSONNALISÉ
+# ==================================================
+@auth_bp.route("/theme/delete", methods=["POST"])
+@login_required
+def delete_theme():
+    """Supprime l'image de fond personnalisée."""
+    if current_user.custom_theme_path:
+        # Supprimer le fichier physique
+        old_path = os.path.join(current_app.static_folder, current_user.custom_theme_path.replace("uploads/", ""))
+        try:
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        except OSError:
+            pass
+        
+        # Retirer de la base de données
+        current_user.custom_theme_path = None
+        db.session.commit()
+        flash("Image de fond supprimée avec succès.", "success")
+    else:
+        flash("Aucune image personnalisée à supprimer.", "info")
+
+    return redirect(request.referrer or url_for("dashboard.index"))
+
+@auth_bp.route("/verify-email/<token>", methods=["GET"])
+def verify_email(token):
+    try:
+        user = AuthService.verify_email(token)
+        flash("Votre adresse email a été vérifiée avec succès ! Vous pouvez maintenant vous connecter.", "success")
+        return redirect(url_for("auth.login"))
+    except AuthError as e:
+        flash(e.message, "danger")
+        return redirect(url_for("auth.login"))

@@ -1,0 +1,55 @@
+{% extends "base.html" %} {% block title %}{{ t('voice.title') }} — LionFlow
+AI{% endblock %} {% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/voice.css') }}"
+/>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">
+        <i class="bi bi-mic-fill"></i> {{ t('voice.title') }}
+      </h1>
+      <p class="text-muted mb-0">{{ t('voice.subtitle') }}</p>
+    </div>
+    <a
+      href="{{ url_for('chatbot.dashboard') }}"
+      class="btn btn-outline-secondary btn-sm"
+    >
+      <i class="bi bi-arrow-left"></i> {{ t('voice.back_chatbot') }}
+    </a>
+  </div>
+
+  <div id="voiceChat" class="lf-voice-container">
+    <div id="voiceMessages" class="lf-voice-messages"></div>
+
+    <div class="lf-voice-controls">
+      <button
+        id="recordBtn"
+        class="lf-record-btn"
+        title="{{ t('voice.press_to_talk') }}"
+      >
+        <i class="bi bi-mic-fill"></i>
+      </button>
+      <span id="recordStatus" class="text-muted small ms-3"
+        >{{ t('voice.ready') }}</span
+      >
+    </div>
+  </div>
+</div>
+
+<script>
+  window.LF_VOICE_I18N = {
+    ready: {{ t('voice.ready')|tojson }},
+    recording: {{ t('voice.recording')|tojson }},
+    processing: {{ t('voice.processing')|tojson }},
+    error: {{ t('voice.error')|tojson }},
+    no_speech: {{ t('voice.no_speech')|tojson }},
+    you: {{ t('voice.you')|tojson }},
+    assistant: {{ t('voice.assistant')|tojson }},
+  };
+</script>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/voice-chat.js') }}"></script>
+{% endblock %}

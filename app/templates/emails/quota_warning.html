@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Alerte Quota</title>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #fffbeb;
+    "
+  >
+    <table
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background: #fffbeb; padding: 40px 0"
+    >
+      <tr>
+        <td align="center">
+          <table
+            width="600"
+            cellpadding="0"
+            cellspacing="0"
+            style="
+              background: #fff;
+              border-radius: 12px;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+              overflow: hidden;
+            "
+          >
+            <tr>
+              <td
+                style="
+                  background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+                  padding: 40px;
+                  text-align: center;
+                "
+              >
+                <h1 style="color: #fff; margin: 0; font-size: 28px">
+                  ⚠️ Alerte de Quota
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 40px 30px">
+                <p style="color: #374151; font-size: 16px; line-height: 1.6">
+                  Bonjour <strong>{{ user.full_name }}</strong>,
+                </p>
+                <p style="color: #374151; font-size: 16px; line-height: 1.6">
+                  Votre entreprise <strong>{{ business.name }}</strong> approche
+                  de la limite de contacts de votre plan.
+                </p>
+
+                <table
+                  width="100%"
+                  cellpadding="15"
+                  cellspacing="0"
+                  style="
+                    background: #fef3c7;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                    border: 1px solid #fde68a;
+                  "
+                >
+                  <tr>
+                    <td align="center">
+                      <div
+                        style="
+                          font-size: 32px;
+                          font-weight: bold;
+                          color: #d97706;
+                        "
+                      >
+                        {{ used }} / {{ limit }}
+                      </div>
+                      <div
+                        style="
+                          font-size: 14px;
+                          color: #92400e;
+                          text-transform: uppercase;
+                        "
+                      >
+                        Contacts utilisés
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="color: #374151; font-size: 15px; line-height: 1.6">
+                  Pour continuer à ajouter de nouveaux contacts et éviter toute
+                  interruption de service, pensez à mettre à niveau votre
+                  abonnement.
+                </p>
+
+                <table
+                  width="100%"
+                  cellpadding="0"
+                  cellspacing="0"
+                  style="margin: 30px 0"
+                >
+                  <tr>
+                    <td align="center">
+                      <a
+                        href="{{ upgrade_url }}"
+                        style="
+                          background: #f59e0b;
+                          color: #fff;
+                          padding: 14px 32px;
+                          text-decoration: none;
+                          border-radius: 8px;
+                          font-weight: bold;
+                          display: inline-block;
+                          font-size: 16px;
+                        "
+                      >
+                        Améliorer mon plan
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  background: #f9fafb;
+                  padding: 20px 30px;
+                  text-align: center;
+                "
+              >
+                <p style="color: #6b7280; font-size: 12px; margin: 0">
+                  © 2026 {{ app_name }} — Tous droits réservés.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

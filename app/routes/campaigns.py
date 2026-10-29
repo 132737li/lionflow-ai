@@ -4,19 +4,24 @@ Multi-tenant : filtré par business_id.
 Supporte les médias (image, PDF, vidéo).
 """
 from datetime import datetime, timezone
+import io
+
 from flask import (
     Blueprint, render_template, redirect, url_for, flash, request, jsonify,
+    current_app, send_file
 )
 from flask_login import login_required
 
 from app.extensions import db
 from app.forms.campaign_forms import CampaignForm
 from app.models.campaign import Campaign, campaign_contacts
+from app.models.telegram_account import TelegramAccount
 from app.models.template import Template
 from app.models.whatsapp_account import WhatsAppAccount
 from app.models.contact import Contact
 from app.models.media_file import MediaFile
 from app.services.campaign_service import CampaignService
+from app.services.campaign_pdf_service import CampaignPdfService
 from app.utils.decorators import require_business, get_current_business
 from app.utils.security import log_activity
 from app.utils.timezones import to_utc
@@ -37,9 +42,11 @@ def _populate_choices(form, business, selected_contacts_ids=None):
         .order_by(Template.name)
         .all()
     )
-    form.template_id.choices = [(0, "— Aucun (utiliser le message personnalisé) —")] + [
+    template_choices = [(0, "— Aucun (utiliser le message personnalisé) —")] + [
         (t.id, t.name) for t in templates
     ]
+    form.template_id.choices = template_choices
+    form.follow_up_template_id.choices = template_choices
 
     # Comptes WhatsApp
     wabas = (
@@ -105,7 +112,6 @@ def list_campaigns():
         page=page, per_page=per_page, error_out=False
     )
 
-    # Compteurs par statut
     status_counts = dict(
         db.session.query(Campaign.status, db.func.count(Campaign.id))
         .filter(Campaign.business_id == business.id)
@@ -132,59 +138,51 @@ def list_campaigns():
 @require_business
 def create_campaign():
     business = get_current_business()
-    _check_campaign_quota(business)
+    
+    # ✅ CORRECTION QUOTA : On vérifie le quota et on redirige si dépassé
+    if not _check_campaign_quota(business):
+        return redirect(url_for("subscriptions.current"))
 
     form = CampaignForm()
     _populate_choices(form, business)
 
     if form.validate_on_submit():
-        # Validation compte WhatsApp obligatoire
+        # Juste avant de créer Campaign(...)
+        tg_id = form.telegram_account_id.data or 0
+        telegram_account = TelegramAccount.query.filter_by(id=tg_id, business_id=business.id).first() if tg_id else None
         waba_id = form.whatsapp_account_id.data or 0
         if not waba_id:
             flash("Sélectionnez un compte WhatsApp.", "danger")
-            return render_template(
-                "campaigns/form.html", form=form, campaign=None, business=business
-            )
-        waba = WhatsAppAccount.query.filter_by(
-            id=waba_id, business_id=business.id
-        ).first()
+            return render_template("campaigns/form.html", form=form, campaign=None, business=business)
+            
+        waba = WhatsAppAccount.query.filter_by(id=waba_id, business_id=business.id).first()
         if not waba:
             flash("Compte WhatsApp invalide.", "danger")
-            return render_template(
-                "campaigns/form.html", form=form, campaign=None, business=business
-            )
+            return render_template("campaigns/form.html", form=form, campaign=None, business=business)
 
-        # Validation template
         template_id = form.template_id.data or 0
         template = None
         if template_id:
-            template = Template.query.filter_by(
-                id=template_id, business_id=business.id
-            ).first()
+            template = Template.query.filter_by(id=template_id, business_id=business.id).first()
 
-        # 📎 Média (optionnel)
         media_id = form.media_file_id.data or 0
         media = None
         if media_id:
-            media = MediaFile.query.filter_by(
-                id=media_id, business_id=business.id
-            ).first()
+            media = MediaFile.query.filter_by(id=media_id, business_id=business.id).first()
 
-        # Programmation
         scheduled_at_utc = None
         if form.scheduled_at.data:
             scheduled_at_utc = to_utc(form.scheduled_at.data, form.timezone.data)
 
-        # Contacts ciblés
         contact_ids = [int(i) for i in (form.contact_ids.data or [])]
         contacts = Contact.query.filter(
             Contact.business_id == business.id,
             Contact.id.in_(contact_ids),
         ).all() if contact_ids else []
 
-        # Détermination du statut
         status = "scheduled" if scheduled_at_utc else "draft"
 
+        # ✅ NOUVEAU : Sauvegarde des relances (directement dans le constructeur)
         campaign = Campaign(
             business_id=business.id,
             template_id=template.id if template else None,
@@ -196,17 +194,22 @@ def create_campaign():
             scheduled_at=scheduled_at_utc,
             timezone=form.timezone.data,
             total_contacts=len(contacts),
+            follow_up_enabled=form.follow_up_enabled.data,
+            follow_up_delay_hours=form.follow_up_delay_hours.data or 24,
+            follow_up_template_id=form.follow_up_template_id.data if form.follow_up_template_id.data and form.follow_up_template_id.data > 0 else None,
+            follow_up_message=(form.follow_up_message.data or "").strip() or None,
         )
         db.session.add(campaign)
         db.session.flush()
 
-        # Association contacts ciblés
+        # Association contacts ciblés (SANS les modifications erronées dans la boucle)
         for c in contacts:
             db.session.execute(
                 campaign_contacts.insert().values(
                     campaign_id=campaign.id, contact_id=c.id
                 )
             )
+            
         db.session.commit()
 
         log_activity(
@@ -216,9 +219,7 @@ def create_campaign():
         flash("Campagne créée.", "success")
         return redirect(url_for("campaigns.detail_campaign", campaign_id=campaign.id))
 
-    return render_template(
-        "campaigns/form.html", form=form, campaign=None, business=business
-    )
+    return render_template("campaigns/form.html", form=form, campaign=None, business=business)
 
 
 # ==================================================
@@ -229,28 +230,38 @@ def create_campaign():
 @require_business
 def detail_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
-    # Recalcul des compteurs (au cas où)
     campaign.recalc_counters()
     db.session.commit()
 
-    messages = (
-        campaign.messages
-        .order_by(db.desc("created_at"))
-        .limit(50)
-        .all()
-    )
+    # ✅ NOUVEAU : Statistiques A/B
+    ab_stats = None
+    if campaign.is_ab_test:
+        a_sent = Message.query.filter_by(campaign_id=campaign.id, is_variant_b=False).count()
+        b_sent = Message.query.filter_by(campaign_id=campaign.id, is_variant_b=True).count()
+        
+        a_read = Message.query.filter_by(campaign_id=campaign.id, is_variant_b=False, status="read").count()
+        b_read = Message.query.filter_by(campaign_id=campaign.id, is_variant_b=True, status="read").count()
+
+        a_rate = round((a_read / a_sent * 100), 1) if a_sent > 0 else 0
+        b_rate = round((b_read / b_sent * 100), 1) if b_sent > 0 else 0
+
+        ab_stats = {
+            "a_sent": a_sent, "a_read": a_read, "a_rate": a_rate,
+            "b_sent": b_sent, "b_read": b_read, "b_rate": b_rate,
+            "winner": "A" if a_rate > b_rate else ("B" if b_rate > a_rate else "Tie")
+        }
+
+    messages = campaign.messages.order_by(db.desc("created_at")).limit(50).all()
 
     return render_template(
         "campaigns/detail.html",
         campaign=campaign,
         business=business,
         messages=messages,
+        ab_stats=ab_stats  # ✅ On passe les stats au template
     )
-
 
 # ==================================================
 # MODIFICATION
@@ -260,16 +271,12 @@ def detail_campaign(campaign_id: int):
 @require_business
 def edit_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
-    # On ne modifie pas une campagne déjà lancée/terminée
     if campaign.status in ("running", "completed", "cancelled"):
         flash("Cette campagne ne peut plus être modifiée.", "warning")
         return redirect(url_for("campaigns.detail_campaign", campaign_id=campaign.id))
 
-    # Récupérer les IDs contacts actuels
     current_contact_ids = [
         row[0] for row in
         db.session.query(campaign_contacts.c.contact_id)
@@ -279,37 +286,41 @@ def edit_campaign(campaign_id: int):
 
     form = CampaignForm(obj=campaign)
     _populate_choices(form, business, current_contact_ids)
+    # Comptes Telegram
+    tg_accounts = (
+        TelegramAccount.query
+        .filter_by(business_id=business.id, is_active=True)
+        .order_by(TelegramAccount.name)
+        .all()
+    )
+    form.telegram_account_id.choices = [(0, "— Aucun —")] + [
+        (t.id, f"Telegram: {t.name} (@{t.bot_username})") for t in tg_accounts
+    ]
 
     if request.method == "GET":
         form.template_id.data = campaign.template_id or 0
         form.whatsapp_account_id.data = campaign.whatsapp_account_id or 0
         form.media_file_id.data = campaign.media_file_id or 0
+        form.follow_up_template_id.data = campaign.follow_up_template_id or 0
+        form.telegram_account_id.data = campaign.telegram_account_id or 0
+        
 
     if form.validate_on_submit():
         waba_id = form.whatsapp_account_id.data or 0
-        waba = WhatsAppAccount.query.filter_by(
-            id=waba_id, business_id=business.id
-        ).first()
+        waba = WhatsAppAccount.query.filter_by(id=waba_id, business_id=business.id).first()
         if not waba:
             flash("Compte WhatsApp invalide.", "danger")
-            return render_template(
-                "campaigns/form.html", form=form, campaign=campaign, business=business
-            )
+            return render_template("campaigns/form.html", form=form, campaign=campaign, business=business)
 
         template_id = form.template_id.data or 0
         template = None
         if template_id:
-            template = Template.query.filter_by(
-                id=template_id, business_id=business.id
-            ).first()
+            template = Template.query.filter_by(id=template_id, business_id=business.id).first()
 
-        # 📎 Média (optionnel)
         media_id = form.media_file_id.data or 0
         media = None
         if media_id:
-            media = MediaFile.query.filter_by(
-                id=media_id, business_id=business.id
-            ).first()
+            media = MediaFile.query.filter_by(id=media_id, business_id=business.id).first()
 
         scheduled_at_utc = None
         if form.scheduled_at.data:
@@ -331,21 +342,21 @@ def edit_campaign(campaign_id: int):
         campaign.scheduled_at = scheduled_at_utc
         campaign.total_contacts = len(contacts)
 
+        # ✅ NOUVEAU : Mise à jour des relances
+        campaign.follow_up_enabled = form.follow_up_enabled.data
+        campaign.follow_up_delay_hours = form.follow_up_delay_hours.data or 24
+        campaign.follow_up_template_id = form.follow_up_template_id.data if form.follow_up_template_id.data and form.follow_up_template_id.data > 0 else None
+        campaign.follow_up_message = (form.follow_up_message.data or "").strip() or None
+
         # Recalcul statut
         if campaign.status in ("draft", "scheduled"):
             campaign.status = "scheduled" if scheduled_at_utc else "draft"
 
         # Reset les associations
-        db.session.execute(
-            campaign_contacts.delete().where(
-                campaign_contacts.c.campaign_id == campaign.id
-            )
-        )
+        db.session.execute(campaign_contacts.delete().where(campaign_contacts.c.campaign_id == campaign.id))
         for c in contacts:
             db.session.execute(
-                campaign_contacts.insert().values(
-                    campaign_id=campaign.id, contact_id=c.id
-                )
+                campaign_contacts.insert().values(campaign_id=campaign.id, contact_id=c.id)
             )
 
         db.session.commit()
@@ -357,9 +368,7 @@ def edit_campaign(campaign_id: int):
         flash("Campagne mise à jour.", "success")
         return redirect(url_for("campaigns.detail_campaign", campaign_id=campaign.id))
 
-    return render_template(
-        "campaigns/form.html", form=form, campaign=campaign, business=business
-    )
+    return render_template("campaigns/form.html", form=form, campaign=campaign, business=business)
 
 
 # ==================================================
@@ -370,9 +379,7 @@ def edit_campaign(campaign_id: int):
 @require_business
 def delete_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
     if campaign.status == "running":
         flash("Impossible de supprimer une campagne en cours. Arrêtez-la d'abord.", "warning")
@@ -398,9 +405,7 @@ def delete_campaign(campaign_id: int):
 @require_business
 def start_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
     try:
         CampaignService.start(campaign)
@@ -415,9 +420,7 @@ def start_campaign(campaign_id: int):
 @require_business
 def pause_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
     try:
         CampaignService.pause(campaign)
@@ -432,9 +435,7 @@ def pause_campaign(campaign_id: int):
 @require_business
 def resume_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
     try:
         CampaignService.resume(campaign)
@@ -449,9 +450,7 @@ def resume_campaign(campaign_id: int):
 @require_business
 def cancel_campaign(campaign_id: int):
     business = get_current_business()
-    campaign = Campaign.query.filter_by(
-        id=campaign_id, business_id=business.id
-    ).first_or_404()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
 
     try:
         CampaignService.cancel(campaign)
@@ -462,12 +461,14 @@ def cancel_campaign(campaign_id: int):
 
 
 # ==================================================
-# QUOTAS
+# QUOTAS (CORRIGÉ)
 # ==================================================
-def _check_campaign_quota(business) -> None:
+def _check_campaign_quota(business) -> bool:
+    """Retourne True si le quota est respecté, False sinon."""
     max_campaigns = business.plan_config.get("max_campaigns", 0)
     if max_campaigns == 0:
-        return
+        return True # 0 signifie illimité
+        
     count = Campaign.query.filter_by(business_id=business.id).count()
     if count >= max_campaigns:
         flash(
@@ -475,4 +476,38 @@ def _check_campaign_quota(business) -> None:
             f"'{business.plan}'. Passez à un plan supérieur.",
             "warning",
         )
-        return redirect(url_for("subscriptions.current"))
+        return False
+    return True
+
+
+# ==================================================
+# EXPORT PDF
+# ==================================================
+@campaigns_bp.route("/<int:campaign_id>/export/pdf")
+@login_required
+@require_business
+def export_pdf(campaign_id: int):
+    business = get_current_business()
+    campaign = Campaign.query.filter_by(id=campaign_id, business_id=business.id).first_or_404()
+
+    try:
+        pdf_bytes = CampaignPdfService.generate_pdf(campaign)
+        buffer = io.BytesIO(pdf_bytes)
+        buffer.seek(0)
+        filename = f"campagne_{campaign.id}_{campaign.name.replace(' ', '_')}.pdf"
+        
+        log_activity(
+            action="campaign_export_pdf",
+            description=f"Export PDF de la campagne : {campaign.name}",
+        )
+
+        return send_file(
+            buffer,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception as e:
+        current_app.logger.exception("Erreur export PDF")
+        flash(f"Impossible de générer le PDF : {e}", "danger")
+        return redirect(url_for("campaigns.detail_campaign", campaign_id=campaign.id))

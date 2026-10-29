@@ -2,6 +2,7 @@
 Configuration centrale de LionFlow AI.
 Trois profils : Development, Testing, Production.
 """
+
 import os
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -20,8 +21,8 @@ class Config:
 
     # --- Base de données ---
     SQLALCHEMY_DATABASE_URI = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///lionflow_ai.db",
+        "DATABASE_URL",
+        "sqlite:///lionflow_ai.db",
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -61,7 +62,7 @@ class Config:
     ALLOWED_MEDIA_DOC_EXT = {"pdf"}
     ALLOWED_MEDIA_VIDEO_EXT = {"mp4", "3gp"}
 
-    MAX_MEDIA_SIZE_MB = int(os.getenv("MAX_MEDIA_SIZE_MB", "16"))   # WhatsApp : 16 Mo
+    MAX_MEDIA_SIZE_MB = int(os.getenv("MAX_MEDIA_SIZE_MB", "16"))
     MAX_MEDIA_SIZE_IMAGE_MB = 5
     MAX_MEDIA_SIZE_VIDEO_MB = 16
     MAX_MEDIA_SIZE_DOC_MB = 100
@@ -76,13 +77,28 @@ class Config:
     WHATSAPP_API_VERSION = os.getenv("WHATSAPP_API_VERSION", "v20.0")
     WHATSAPP_DEV_MODE = os.getenv("WHATSAPP_DEV_MODE", "1") == "1"
     WHATSAPP_APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
-    
-    # --- Paiement ---
+
+    # --- Chiffrement (Fernet : tokens WhatsApp, Telegram, IA) ---
+    FERNET_KEY = os.getenv("FERNET_KEY", "")
+
+    # --- Celery ---
+    CELERY_ENABLED = os.getenv("CELERY_ENABLED", "0") == "1"
+    CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+    CELERY_TASK_ALWAYS_EAGER = False
+
+    # --- Paiement (Générique) ---
     PAYMENT_PROVIDER = os.getenv("PAYMENT_PROVIDER", "")
     PAYMENT_API_URL = os.getenv("PAYMENT_API_URL", "")
     PAYMENT_API_KEY = os.getenv("PAYMENT_API_KEY", "")
     PAYMENT_WEBHOOK_SECRET = os.getenv("PAYMENT_WEBHOOK_SECRET", "")
     PAYMENT_SUCCESS_URL = os.getenv("PAYMENT_SUCCESS_URL", "")
+
+    # ✅ UltraNer (Cartes bancaires, PayPal, Lumicash, Ecocash)
+    ULTRANER_API_KEY = os.getenv("ULTRANER_API_KEY", "")
+    ULTRANER_WEBHOOK_SECRET = os.getenv("ULTRANER_WEBHOOK_SECRET", "")
+
+    # Stripe (au cas où)
     STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
     STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -99,23 +115,20 @@ class Config:
     MAIL_DEBUG = False
     MAIL_MAX_EMAILS = None
     MAIL_ASCII_ATTACHMENTS = False
-    
+
     # --- Notifications Push (VAPID) ---
     VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
     VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
     VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:admin@lionflow.ai")
-
 
     # --- Scheduler ---
     SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "1") == "1"
 
     # --- Pagination ---
     ITEMS_PER_PAGE = 20
-    
+
     # --- IA (chatbot) ---
-    # Limite globale par défaut (si non configurée par entreprise)
     AI_DEFAULT_MAX_REQUESTS_MONTH = int(os.getenv("AI_DEFAULT_MAX_REQUESTS_MONTH", "1000"))
-    # Timeout des appels API IA
     AI_REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "30"))
 
     # --- Plans d'abonnement ---
@@ -123,6 +136,7 @@ class Config:
         "free": {
             "label": "Free",
             "price_eur": 0,
+            "price_bif": 0,
             "max_contacts": 100,
             "max_messages_month": 500,
             "max_whatsapp_accounts": 1,
@@ -132,6 +146,7 @@ class Config:
         "pro": {
             "label": "Pro",
             "price_eur": 29,
+            "price_bif": 89900,   # ≈ 29 €
             "max_contacts": 5000,
             "max_messages_month": 25000,
             "max_whatsapp_accounts": 3,
@@ -141,6 +156,7 @@ class Config:
         "business": {
             "label": "Business",
             "price_eur": 99,
+            "price_bif": 299900,  # ≈ 99 €
             "max_contacts": 50000,
             "max_messages_month": 250000,
             "max_whatsapp_accounts": 10,
@@ -166,12 +182,17 @@ class TestingConfig(Config):
     SECRET_KEY = "test-secret-key-with-minimum-32-bytes-for-hmac-sha256"
     MAIL_SUPPRESS_SEND = True
 
+    # Configuration Celery pour les tests
+    CELERY_ENABLED = False
+    CELERY_TASK_ALWAYS_EAGER = True
+
 
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True
     REMEMBER_COOKIE_SECURE = True
+    CELERY_ENABLED = os.getenv("CELERY_ENABLED", "1") == "1"
 
 
 CONFIG_MAP = {

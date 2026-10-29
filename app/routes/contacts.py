@@ -2,7 +2,10 @@
 CRUD complet des contacts + import CSV/Excel.
 Filtrage multi-tenant : l'utilisateur ne voit que les contacts de l'entreprise active.
 Pays par défaut : Burundi (+257). Tous les pays acceptés.
+
+✅ Émet des webhooks sortants sur create / update / delete.
 """
+
 import phonenumbers
 
 from flask import (
@@ -16,6 +19,7 @@ from app.extensions import db
 from app.forms.contact_forms import ContactForm, ImportContactsForm, ContactSearchForm
 from app.models.contact import Contact
 from app.services.contact_import_service import ContactImportService
+from app.services import webhook_service
 from app.utils.decorators import require_business, get_current_business
 from app.utils.security import log_activity
 from app.utils.validators import allowed_file, normalize_phone
@@ -28,21 +32,13 @@ contacts_bp = Blueprint("contacts", __name__, template_folder="../templates/cont
 # HELPER — Fusionner indicatif + numéro
 # ==================================================
 def _merge_country_and_phone(country_code: str, raw_phone: str) -> str | None:
-    """
-    Fusionne l'indicatif du pays sélectionné avec le numéro saisi.
-    - Si le numéro contient déjà un '+', on le respecte (international).
-    - Sinon, on préfixe avec l'indicatif du pays choisi.
-    Retourne le numéro au format E.164 (+XXX...) ou None si invalide.
-    """
     if not raw_phone:
         return None
     raw = str(raw_phone).strip()
 
-    # Si l'utilisateur a déjà tapé +XXX..., on valide tel quel
     if raw.startswith("+"):
         return normalize_phone(raw, default_region="BI")
 
-    # Sinon, on ajoute l'indicatif du pays sélectionné
     region = country_code or "BI"
     if region == "OTHER":
         region = "BI"
@@ -123,7 +119,6 @@ def create_contact():
 
     form = ContactForm()
     if form.validate_on_submit():
-        # Fusionner indicatif pays + numéro
         final_phone = _merge_country_and_phone(
             form.country_code.data, form.phone.data
         )
@@ -133,7 +128,6 @@ def create_contact():
                 "contacts/form.html", form=form, contact=None, business=business
             )
 
-        # Vérifier doublon
         existing = Contact.query.filter_by(
             business_id=business.id, phone=final_phone
         ).first()
@@ -163,6 +157,21 @@ def create_contact():
             action="contact_create",
             description=f"Contact créé : {contact.full_name} ({contact.phone})",
         )
+
+        # ✅ WEBHOOK : contact.created
+        webhook_service.notify(
+            "contact.created",
+            business.id,
+            contact_id=contact.id,
+            phone=contact.phone,
+            first_name=contact.first_name,
+            last_name=contact.last_name,
+            email=contact.email,
+            company=contact.company,
+            status=contact.status,
+            tags=contact.tags_list if hasattr(contact, "tags_list") else [],
+        )
+
         flash("Contact créé avec succès.", "success")
         return redirect(url_for("contacts.list_contacts"))
 
@@ -198,7 +207,6 @@ def edit_contact(contact_id: int):
     form = ContactForm(obj=contact)
     if request.method == "GET":
         form.tags.data = ", ".join(contact.tags_list)
-        # Préremplir phone sans l'indicatif s'il correspond à un pays connu
         form.country_code.data = "BI"
         form.phone.data = contact.phone
 
@@ -212,7 +220,6 @@ def edit_contact(contact_id: int):
                 "contacts/form.html", form=form, contact=contact, business=business
             )
 
-        # Vérifier doublon (autre contact avec le même numéro)
         dup = Contact.query.filter(
             Contact.business_id == business.id,
             Contact.phone == final_phone,
@@ -242,6 +249,20 @@ def edit_contact(contact_id: int):
             action="contact_update",
             description=f"Contact modifié : {contact.full_name} ({contact.phone})",
         )
+
+        # ✅ WEBHOOK : contact.updated
+        webhook_service.notify(
+            "contact.updated",
+            business.id,
+            contact_id=contact.id,
+            phone=contact.phone,
+            first_name=contact.first_name,
+            last_name=contact.last_name,
+            email=contact.email,
+            company=contact.company,
+            status=contact.status,
+        )
+
         flash("Contact mis à jour.", "success")
         return redirect(url_for("contacts.list_contacts"))
 
@@ -260,15 +281,28 @@ def delete_contact(contact_id: int):
         id=contact_id, business_id=business.id
     ).first_or_404()
 
-    name = contact.full_name
+    # Capture avant suppression
+    captured_id = contact.id
+    captured_phone = contact.phone
+    captured_name = contact.full_name
+
     db.session.delete(contact)
     db.session.commit()
 
     log_activity(
         action="contact_delete",
-        description=f"Contact supprimé : {name} (id={contact_id})",
+        description=f"Contact supprimé : {captured_name} (id={captured_id})",
     )
-    flash(f"Contact « {name} » supprimé.", "info")
+
+    # ✅ WEBHOOK : contact.deleted
+    webhook_service.notify(
+        "contact.deleted",
+        business.id,
+        contact_id=captured_id,
+        phone=captured_phone,
+    )
+
+    flash(f"Contact « {captured_name} » supprimé.", "info")
     return redirect(url_for("contacts.list_contacts"))
 
 
@@ -291,18 +325,6 @@ def import_contacts():
             return render_template("contacts/import.html", form=form, business=business, report=None)
 
         report = ContactImportService.import_file(file, business)
-        # 🔍 DEBUG TEMPORAIRE
-        import sys
-        print(f"\n🔍 IMPORT DEBUG:", file=sys.stderr)
-        print(f"🔍   fichier = {file.filename}", file=sys.stderr)
-        print(f"🔍   business_id = {business.id}", file=sys.stderr)
-        print(f"🔍   total_rows = {report.total_rows}", file=sys.stderr)
-        print(f"🔍   added = {report.added}", file=sys.stderr)
-        print(f"🔍   duplicates = {report.duplicates}", file=sys.stderr)
-        print(f"🔍   errors = {report.errors[:3]}", file=sys.stderr)
-        print(f"🔍   detected_columns = {report.detected_columns}", file=sys.stderr)
-        
-        
 
         log_activity(
             action="contact_import",
@@ -312,6 +334,13 @@ def import_contacts():
                 f"{len(report.errors)} erreurs"
             ),
         )
+
+        # ⚠️ Pas de notify() pour l'import en masse (potentiellement 1000+ contacts).
+        #    Si tu veux émettre contact.created pour les imports, il faut :
+        #    1. Ajouter dans ContactImportService.import_file() un hook qui retourne
+        #       la liste des contact_ids créés.
+        #    2. Émettre UN SEUL événement batché "contact.bulk_imported" avec {count, ids[]}.
+        #    Recommandé en production : passer l'émission via Celery.
 
         if report.added > 0:
             flash(f"Import terminé : {report.added} contact(s) ajouté(s).", "success")
@@ -345,6 +374,14 @@ def bulk_delete():
         flash("Identifiants invalides.", "danger")
         return redirect(url_for("contacts.list_contacts"))
 
+    # Capture avant suppression (pour les webhooks)
+    contacts_to_delete = (
+        Contact.query
+        .filter(Contact.business_id == business.id, Contact.id.in_(ids))
+        .all()
+    )
+    captured = [(c.id, c.phone) for c in contacts_to_delete]
+
     deleted = (
         Contact.query
         .filter(Contact.business_id == business.id, Contact.id.in_(ids))
@@ -356,5 +393,18 @@ def bulk_delete():
         action="contact_bulk_delete",
         description=f"{deleted} contact(s) supprimé(s) en masse",
     )
+
+    # ✅ WEBHOOK : un contact.deleted par contact supprimé
+    # ⚠️ ATTENTION PERF : pour 500 contacts, cela déclenche 500 appels HTTP
+    #    synchrones. En production avec Zapier/Make, préférer un événement batché.
+    for cid, cphone in captured:
+        webhook_service.notify(
+            "contact.deleted",
+            business.id,
+            contact_id=cid,
+            phone=cphone,
+            bulk=True,
+        )
+
     flash(f"{deleted} contact(s) supprimé(s).", "success")
     return redirect(url_for("contacts.list_contacts"))

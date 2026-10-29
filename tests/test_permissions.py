@@ -5,10 +5,12 @@ import pytest
 
 
 class TestAuthenticationRequired:
+    
     def test_dashboard_requires_login(self, client):
-        resp = client.get("/", follow_redirects=False)
+        # ✅ On teste /dashboard/ au lieu de /
+        resp = client.get("/dashboard/")
         assert resp.status_code == 302
-        assert "/auth/login" in resp.headers.get("Location", "")
+        assert "/auth/login" in resp.headers["Location"]
 
     def test_contacts_requires_login(self, client):
         resp = client.get("/contacts/", follow_redirects=False)
@@ -17,8 +19,7 @@ class TestAuthenticationRequired:
     def test_campaigns_requires_login(self, client):
         resp = client.get("/campaigns/", follow_redirects=False)
         assert resp.status_code == 302
-
-
+        
 class TestRoleAccess:
     def test_admin_role_recognized(self, db, admin_user):
         assert admin_user.is_admin is True
