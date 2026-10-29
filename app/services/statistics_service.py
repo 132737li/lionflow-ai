@@ -3,6 +3,7 @@ Service de statistiques et d'analyses pour le dashboard.
 Toutes les fonctions agrègent les données par business_id.
 """
 from datetime import datetime, timezone, timedelta, date
+from collections import Counter
 
 from sqlalchemy import func, extract, case, desc
 
@@ -536,3 +537,98 @@ class StatisticsService:
             })
 
         return insights
+
+    # ==================================================
+    # ✅ NOUVEAU : EFFICACITÉ DES RELANCES
+    # ==================================================
+    @staticmethod
+    def follow_up_stats(business_id: int) -> dict:
+        """Compare les performances du message initial vs les relances."""
+        stats = db.session.query(
+            func.sum(case((Message.is_follow_up == False, 1), else_=0)).label("initial_total"),
+            func.sum(case(((Message.is_follow_up == False) & (Message.status == "read"), 1), else_=0)).label("initial_read"),
+            func.sum(case((Message.is_follow_up == True, 1), else_=0)).label("followup_total"),
+            func.sum(case(((Message.is_follow_up == True) & (Message.status == "read"), 1), else_=0)).label("followup_read")
+        ).join(Campaign, Message.campaign_id == Campaign.id).filter(Campaign.business_id == business_id).one()
+
+        init_total = int(stats.initial_total or 0)
+        init_read = int(stats.initial_read or 0)
+        foll_total = int(stats.followup_total or 0)
+        foll_read = int(stats.followup_read or 0)
+
+        return {
+            "initial": {"total": init_total, "read": init_read, "rate": round(init_read/init_total*100, 1) if init_total else 0},
+            "followup": {"total": foll_total, "read": foll_read, "rate": round(foll_read/foll_total*100, 1) if foll_total else 0}
+        }
+
+    # ==================================================
+    # ✅ NOUVEAU : RÉPARTITION GÉOGRAPHIQUE
+    # ==================================================
+    @staticmethod
+    def geographic_distribution(business_id: int) -> dict:
+        """Analyse les préfixes téléphoniques pour deviner le pays des contacts."""
+        contacts = db.session.query(Contact.phone).filter(Contact.business_id == business_id).all()
+        
+        # Dictionnaire de correspondance (à compléter selon tes besoins)
+        COUNTRY_MAP = {
+            "+257": "Burundi 🇧🇮",
+            "+243": "RD Congo 🇨🇩",
+            "+250": "Rwanda 🇷🇼",
+            "+33": "France 🇫🇷",
+            "+32": "Belgique 🇧🇪",
+            "+1": "USA/Canada 🇺🇸",
+            "+44": "Royaume-Uni 🇬🇧",
+            "+255": "Tanzanie 🇹🇿",
+            "+256": "Ouganda 🇺🇬",
+            "+254": "Kenya 🇰🇪",
+            "+27": "Afrique du Sud 🇿🇦",
+        }
+
+        counts = Counter()
+        for c in contacts:
+            phone = c.phone or ""
+            matched = False
+            for prefix, country in COUNTRY_MAP.items():
+                if phone.startswith(prefix):
+                    counts[country] += 1
+                    matched = True
+                    break
+            if not matched and phone:
+                counts["Autre 🌍"] += 1
+
+        # Trier et prendre le top 5
+        top_countries = counts.most_common(5)
+        return {
+            "labels": [c[0] for c in top_countries],
+            "values": [c[1] for c in top_countries]
+        }
+
+    # ==================================================
+    # ✅ NOUVEAU : TOP CAMPAGNES
+    # ==================================================
+    @staticmethod
+    def top_campaigns(business_id: int, limit: int = 5) -> list:
+        """Retourne les campagnes avec les meilleurs taux de lecture."""
+        campaigns = Campaign.query.filter(
+            Campaign.business_id == business_id,
+            Campaign.status == "completed",
+            Campaign.sent_count > 0
+        ).all()
+
+        results = []
+        for c in campaigns:
+            # Le taux de lecture est basé sur le nombre de messages effectivement envoyés
+            if c.sent_count > 0:
+                rate = round((c.read_count / c.sent_count) * 100, 1)
+                results.append({
+                    "id": c.id,
+                    "name": c.name,
+                    "total": c.total_contacts,
+                    "sent": c.sent_count,
+                    "read": c.read_count,
+                    "rate": rate
+                })
+
+        # Trier par taux de lecture décroissant
+        results.sort(key=lambda x: x["rate"], reverse=True)
+        return results[:limit]

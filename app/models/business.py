@@ -27,6 +27,11 @@ class Business(db.Model):
     address = db.Column(db.String(500))
     country = db.Column(db.String(100))
     logo_path = db.Column(db.String(500))
+    
+    # ✅ NOUVEAU : White-Label
+    app_name = db.Column(db.String(100))
+    primary_color = db.Column(db.String(7), default="#10b981")   # Vert par défaut
+    secondary_color = db.Column(db.String(7), default="#0ea5e9") # Bleu par défaut
 
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)

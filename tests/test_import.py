@@ -128,7 +128,8 @@ def test_import_debug(logged_client, business, db):
 
     assert resp.status_code == 200
     
-    def test_import_debug_detail(logged_client, business, db):
+    
+def test_import_debug_detail(logged_client, business, db):
     """Diagnostic détaillé : voir le rapport d'import."""
     import io
     from app.models.contact import Contact
@@ -165,3 +166,91 @@ def test_import_debug(logged_client, business, db):
     print(f"\n🔍 Contacts en base = {Contact.query.count()}")
 
     assert report.added == 2, f"Attendu 2, obtenu {report.added}. Errors: {report.errors}"
+    
+    # ==================================================
+# 🎯 Indicatif Burundi par défaut (+257)
+# ==================================================
+def test_import_phone_without_plus_uses_burundi_prefix(
+    logged_client, business, db
+):
+    """Un numéro local burundais sans '+' doit être auto-préfixé +257."""
+    import io
+    from app.models.contact import Contact
+
+    content = (
+        "prenom,nom,phone\n"
+        "Local,Burundi,76672387\n"     # local sans +
+    )
+    data = {"file": (io.BytesIO(content.encode("utf-8")), "contacts.csv")}
+    logged_client.post(
+        "/contacts/import", data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    c = Contact.query.filter_by(business_id=business.id).first()
+    assert c is not None
+    assert c.phone == "+25776672387"
+
+
+def test_import_phone_with_257_prefix_no_plus(
+    logged_client, business, db
+):
+    """Un numéro commençant par 257 sans '+' est auto-corrigé."""
+    import io
+    from app.models.contact import Contact
+
+    content = (
+        "prenom,nom,phone\n"
+        "With,Code,25776672387\n"      # 257 sans +
+    )
+    data = {"file": (io.BytesIO(content.encode("utf-8")), "contacts.csv")}
+    logged_client.post(
+        "/contacts/import", data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    c = Contact.query.filter_by(business_id=business.id).first()
+    assert c is not None
+    assert c.phone == "+25776672387"
+
+
+def test_import_phone_international_still_works(
+    logged_client, business, db
+):
+    """Un numéro international avec '+' n'est PAS préfixé par +257."""
+    import io
+    from app.models.contact import Contact
+
+    content = (
+        "prenom,nom,phone\n"
+        "French,User,+33611111111\n"
+    )
+    data = {"file": (io.BytesIO(content.encode("utf-8")), "contacts.csv")}
+    logged_client.post(
+        "/contacts/import", data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    c = Contact.query.filter_by(business_id=business.id).first()
+    assert c is not None
+    assert c.phone == "+33611111111"   # ← respecte le +
+
+
+def test_import_phone_foreign_without_plus_rejected(
+    logged_client, business, db
+):
+    """Un numéro étranger sans '+' est ambigu → rejeté (règle Burundi par défaut)."""
+    import io
+    from app.models.contact import Contact
+
+    content = (
+        "prenom,nom,phone\n"
+        "Ambiguous,French,33611111111\n"   # FR sans + → rejeté
+    )
+    data = {"file": (io.BytesIO(content.encode("utf-8")), "contacts.csv")}
+    logged_client.post(
+        "/contacts/import", data=data,
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert Contact.query.filter_by(business_id=business.id).count() == 0

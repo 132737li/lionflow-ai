@@ -36,6 +36,11 @@ def index():
     top_contacts = StatisticsService.top_contacts(business.id, limit=5)
     insights = StatisticsService.insights(business.id)
 
+    # ============ ✅ NOUVELLES STATISTIQUES ============
+    follow_up_stats = StatisticsService.follow_up_stats(business.id)
+    geo_stats = StatisticsService.geographic_distribution(business.id)
+    top_campaigns = StatisticsService.top_campaigns(business.id, limit=5)
+
     # ============ TAUX ============
     delivery_rate = StatisticsService.delivery_rate(business.id)
     read_rate = StatisticsService.read_rate(business.id)
@@ -79,4 +84,8 @@ def index():
         subscription=sub,
         plan_config=plan_config,
         notifications=notifications,
+        # ✅ NOUVELLES DONNÉES PASSÉES AU TEMPLATE
+        follow_up_stats=follow_up_stats,
+        geo_stats=geo_stats,
+        top_campaigns=top_campaigns,
     )

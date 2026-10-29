@@ -31,6 +31,8 @@ def app():
     app.config["SERVER_NAME"] = "localhost"
     app.config["WTF_CSRF_ENABLED"] = False
     app.config["SCHEDULER_ENABLED"] = False
+    app.config["CELERY_ENABLED"] = False
+    app.config["CELERY_TASK_ALWAYS_EAGER"] = True
 
     with app.app_context():
         _db.create_all()

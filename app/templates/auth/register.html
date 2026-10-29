@@ -1,69 +1,226 @@
-{% extends "base.html" %}
-{% block title %}Inscription — LionFlow AI{% endblock %}
-
-{% block auth_content %}
-<div class="row justify-content-center align-items-center min-vh-100">
-    <div class="col-md-8 col-lg-6">
-        <div class="text-center mb-4">
-            <img src="{{ url_for('static', filename='images/logo.png') }}"
-                 alt="LionFlow AI" class="lf-logo-badge">
-            <h1 class="h3 mt-3 mb-1">Créer un compte LionFlow AI</h1>
-            <p class="text-muted">Gérez vos communications WhatsApp en toute simplicité</p>
-        </div>
-
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
-                <form method="POST" novalidate>
-                    {{ form.hidden_tag() }}
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.first_name.label(class="form-label") }}
-                            {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
-                            {% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.last_name.label(class="form-label") }}
-                            {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
-                            {% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.email.label(class="form-label") }}
-                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
-                                     placeholder="vous@exemple.com") }}
-                        {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else "")) }}
-                        {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                        <div class="form-text">Minimum 8 caractères, une lettre et un chiffre.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.confirm_password.label(class="form-label") }}
-                        {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else "")) }}
-                        {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="form-check mb-3">
-                        {{ form.accept_terms(class="form-check-input" + (" is-invalid" if form.accept_terms.errors else "")) }}
-                        {{ form.accept_terms.label(class="form-check-label") }}
-                        {% for e in form.accept_terms.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
-                    </div>
-
-                    {{ form.submit(class="btn btn-primary w-100") }}
-                </form>
-            </div>
-        </div>
-
-        <p class="text-center mt-4 mb-0 text-muted">
-            Déjà un compte ?
-            <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Se connecter</a>
-        </p>
+{% extends "base.html" %} {% block title %}Inscription — LionFlow AI{% endblock
+%} {% block head %}
+<style>
+  /* On réutilise exactement le même CSS que pour login */
+  .lf-auth-wrapper {
+    padding: 0 !important;
+    background: #f8fafc;
+  }
+  .lf-auth-wrapper > .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .auth-split-screen {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+  }
+  .auth-left-panel {
+    flex: 1;
+    background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
+    color: white;
+    padding: 4rem;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .auth-left-panel::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 60%
+    );
+    animation: rotate 30s linear infinite;
+  }
+  @keyframes rotate {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .auth-right-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: #ffffff;
+  }
+  .auth-form-card {
+    width: 100%;
+    max-width: 480px;
+    z-index: 1;
+  }
+  .btn-lf-primary {
+    background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
+    color: white;
+    border: none;
+    padding: 0.8rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  }
+  .btn-lf-primary:hover {
+    opacity: 0.9;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+  }
+  .form-control {
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
+  }
+  .form-control:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  }
+  @media (min-width: 992px) {
+    .auth-left-panel {
+      display: flex;
+    }
+    .auth-right-panel {
+      background: #f8fafc;
+    }
+    .auth-form-card {
+      background: white;
+      padding: 3rem;
+      border-radius: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    }
+  }
+</style>
+{% endblock %} {% block auth_content %}
+<div class="auth-split-screen">
+  <!-- Côté Gauche -->
+  <div class="auth-left-panel text-center text-lg-start">
+    <div class="position-relative" style="z-index: 2">
+      <h1 class="display-5 fw-bold mb-4">Rejoignez LionFlow AI</h1>
+      <p class="fs-5 mb-5 opacity-75">
+        Créez votre compte en quelques secondes et commencez à automatiser vos
+        campagnes WhatsApp dès aujourd'hui.
+      </p>
+      <ul class="list-unstyled fs-5 opacity-90">
+        <li class="mb-3 d-flex align-items-center">
+          <i class="bi bi-star-fill me-3"></i> Essai gratuit
+        </li>
+        <li class="mb-3 d-flex align-items-center">
+          <i class="bi bi-shield-check me-3"></i> Sécurité de niveau entreprise
+        </li>
+        <li class="mb-3 d-flex align-items-center">
+          <i class="bi bi-headset me-3"></i> Support dédié
+        </li>
+      </ul>
     </div>
+  </div>
+
+  <!-- Côté Droit -->
+  <div class="auth-right-panel">
+    <div class="auth-form-card">
+      <h2 class="h3 fw-bold mb-2">Créer un compte</h2>
+      <p class="text-muted mb-4">
+        Gérez vos communications WhatsApp en toute simplicité.
+      </p>
+
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            {{ form.first_name.label(class="form-label fw-semibold") }} {{
+            form.first_name(class="form-control" + (" is-invalid" if
+            form.first_name.errors else ""), placeholder="Jean") }} {% for e in
+            form.first_name.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+          <div class="col-md-6 mb-3">
+            {{ form.last_name.label(class="form-label fw-semibold") }} {{
+            form.last_name(class="form-control" + (" is-invalid" if
+            form.last_name.errors else ""), placeholder="Dupont") }} {% for e in
+            form.last_name.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          {{ form.email.label(class="form-label fw-semibold") }}
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"
+              ><i class="bi bi-envelope text-muted"></i
+            ></span>
+            {{ form.email(class="form-control border-start-0" + (" is-invalid"
+            if form.email.errors else ""), placeholder="vous@exemple.com") }}
+          </div>
+          {% for e in form.email.errors %}
+          <div class="invalid-feedback d-block">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          {{ form.password.label(class="form-label fw-semibold") }}
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"
+              ><i class="bi bi-lock text-muted"></i
+            ></span>
+            {{ form.password(class="form-control border-start-0" + ("
+            is-invalid" if form.password.errors else ""),
+            placeholder="••••••••") }}
+          </div>
+          <div class="form-text small">
+            Minimum 8 caractères, une lettre et un chiffre.
+          </div>
+          {% for e in form.password.errors %}
+          <div class="invalid-feedback d-block">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-4">
+          {{ form.confirm_password.label(class="form-label fw-semibold") }}
+          <div class="input-group">
+            <span class="input-group-text bg-light border-end-0"
+              ><i class="bi bi-shield-lock text-muted"></i
+            ></span>
+            {{ form.confirm_password(class="form-control border-start-0" + ("
+            is-invalid" if form.confirm_password.errors else ""),
+            placeholder="••••••••") }}
+          </div>
+          {% for e in form.confirm_password.errors %}
+          <div class="invalid-feedback d-block">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="form-check mb-4">
+          {{ form.accept_terms(class="form-check-input" + (" is-invalid" if
+          form.accept_terms.errors else "")) }} {{
+          form.accept_terms.label(class="form-check-label text-muted small") }}
+          {% for e in form.accept_terms.errors %}
+          <div class="invalid-feedback d-block">{{ e }}</div>
+          {% endfor %}
+        </div>
+
+        {{ form.submit(class="btn btn-lf-primary w-100") }}
+      </form>
+
+      <p class="text-center mt-4 mb-0 text-muted">
+        Déjà un compte ?
+        <a
+          href="{{ url_for('auth.login') }}"
+          class="text-decoration-none fw-semibold text-primary"
+          >Se connecter</a
+        >
+      </p>
+    </div>
+  </div>
 </div>
 {% endblock %}

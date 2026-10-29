@@ -30,12 +30,22 @@ class User(UserMixin, db.Model):
     )
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
+    # ✅ NOUVEAU : Vérification par email
+    
+    verification_token = db.Column(db.String(128), index=True)
+    verification_token_exp = db.Column(db.DateTime)
 
     # 📸 Photo de profil
     avatar_path = db.Column(db.String(500))
+    custom_theme_path = db.Column(db.String(500))
     
     # 🌍 Langue préférée
     language = db.Column(db.String(5), nullable=False, default="fr")
+    
+    # Email automatiques (notifications)
+    email_notifications_enabled = db.Column(
+        db.Boolean, nullable=False, default=True, server_default="1"
+    )
 
     # 🔐 2FA (TOTP)
     totp_secret = db.Column(db.String(255))           # Secret chiffré

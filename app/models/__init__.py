@@ -20,6 +20,8 @@ from app.models.push_subscription import PushSubscription
 from app.models.media_file import MediaFile
 from app.models.ai_config import AiConfig
 from app.models.campaign_template import CampaignTemplate
+from app.models.business_member import BusinessMember
+from app.models.role_change_request import RoleChangeRequest
 
 __all__ = [
     "User",

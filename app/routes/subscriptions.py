@@ -9,6 +9,17 @@ from flask import (
     current_app,
 )
 from flask_login import login_required
+from flask import Blueprint, render_template, redirect, url_for, flash, request
+
+from flask_login import login_required, current_user
+
+from app.utils.decorators import require_business, get_current_business
+
+from app.services.payment_service import PaymentService
+
+
+# ... (tes autres imports) ...
+
 
 from app.extensions import db
 from app.models.subscription import Subscription
@@ -219,3 +230,31 @@ def _count_messages_this_month(business) -> int:
         )
         .scalar() or 0
     )
+    
+@subscriptions_bp.route("/checkout/<plan_name>")
+@login_required
+@require_business
+def checkout(plan_name):
+    """Redirige l'utilisateur vers la page de paiement UltraNer."""
+    business = get_current_business()
+    
+    PRICES = {
+        "pro": 89900,     # Mise à jour des prix en BIF pour correspondre au config
+        "business": 299900 
+    }
+    
+    if plan_name not in PRICES:
+        flash("Plan invalide.", "danger")
+        return redirect(url_for("subscriptions.current"))
+
+    try:
+        checkout_url = PaymentService.create_checkout_session(
+            plan_name=plan_name.title(),
+            amount_bif=PRICES[plan_name],
+            user_email=current_user.email,
+            business_id=business.id  # ✅ On passe l'ID de l'entreprise en cours
+        )
+        return redirect(checkout_url)
+    except Exception as e:
+        flash(f"Erreur lors de l'initialisation du paiement : {str(e)}", "danger")
+        return redirect(url_for("subscriptions.current"))

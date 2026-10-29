@@ -1,0 +1,203 @@
+/* LionFlow AI — Styles du calendrier des campagnes */
+
+#campaignCalendar {
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    position: relative;
+    transition: opacity 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+/* =========================================
+   EN-TÊTE ET BOUTONS (Design LionFlow)
+   ========================================= */
+#campaignCalendar .fc-toolbar-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #065f46;
+    /* Vert foncé LionFlow */
+    text-transform: capitalize;
+}
+
+/* Boutons génériques (Précédent, Suivant, Aujourd'hui, Mois, etc.) */
+#campaignCalendar .fc-button {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    font-weight: 600;
+    border-radius: 0.375rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+    transition: all 0.2s ease-in-out;
+    box-shadow: none !important;
+    /* Retire l'ombre par défaut */
+}
+
+#campaignCalendar .fc-button:hover {
+    background-color: #e9ecef;
+    color: #212529;
+    border-color: #ced4da;
+}
+
+/* Bouton "Aujourd'hui" (Bouton d'action principal) */
+#campaignCalendar .fc-today-button {
+    background-color: #10b981;
+    /* Vert LionFlow */
+    border-color: #10b981;
+    color: white;
+}
+
+#campaignCalendar .fc-today-button:hover {
+    background-color: #059669;
+    border-color: #059669;
+    color: white;
+}
+
+/* Boutons actifs (ex: "Mois" quand on est en vue Mois) */
+#campaignCalendar .fc-button-active,
+#campaignCalendar .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: #0ea5e9 !important;
+    /* Bleu LionFlow */
+    border-color: #0ea5e9 !important;
+    color: white !important;
+}
+
+/* Bouton désactivé */
+#campaignCalendar .fc-button:disabled {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #adb5bd;
+    opacity: 0.65;
+}
+
+/* =========================================
+   ÉVÉNEMENTS (Campagnes)
+   ========================================= */
+#campaignCalendar .fc-event {
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+    font-size: 0.8rem;
+    padding: 3px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: transform 0.15s ease, filter 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+#campaignCalendar .fc-event:hover {
+    filter: brightness(0.9);
+    transform: translateY(-1px);
+    z-index: 5;
+}
+
+#campaignCalendar .fc-event.fc-event-dragging {
+    opacity: 0.9;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
+}
+
+/* =========================================
+   GRILLE ET CELLULES
+   ========================================= */
+#campaignCalendar .fc-day-today {
+    background: rgba(16, 185, 129, 0.05) !important;
+}
+
+#campaignCalendar .fc-col-header-cell {
+    background-color: #f8f9fa;
+    padding: 10px 0;
+    border-bottom: 2px solid #dee2e6;
+}
+
+#campaignCalendar .fc-col-header-cell-cushion {
+    color: #495057;
+    font-weight: 600;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+
+#campaignCalendar .fc-daygrid-day-number {
+    color: #6c757d;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 4px 8px;
+}
+
+#campaignCalendar .fc-daygrid-day-number:hover {
+    color: #10b981;
+}
+
+/* =========================================
+   THÈME SOMBRE (Compatible Bootstrap 5)
+   ========================================= */
+[data-bs-theme="dark"] #campaignCalendar {
+    background: #1e1e1e;
+    color: #e0e0e0;
+    border-color: #333;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-theme-standard td,
+[data-bs-theme="dark"] #campaignCalendar .fc-theme-standard th,
+[data-bs-theme="dark"] #campaignCalendar .fc-scrollgrid {
+    border-color: #333;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-day-today {
+    background: rgba(16, 185, 129, 0.1) !important;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-col-header-cell {
+    background-color: #2b2b2b;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-col-header-cell-cushion,
+[data-bs-theme="dark"] #campaignCalendar .fc-daygrid-day-number {
+    color: #adb5bd;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-button {
+    background-color: #2b2b2b;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-button:hover {
+    background-color: #3a3a3a;
+}
+
+[data-bs-theme="dark"] #campaignCalendar .fc-toolbar-title {
+    color: #10b981;
+}
+
+/* =========================================
+   RESPONSIVE (Mobile)
+   ========================================= */
+@media (max-width: 768px) {
+    #campaignCalendar {
+        padding: 0.75rem;
+    }
+
+    #campaignCalendar .fc-toolbar {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+    }
+
+    #campaignCalendar .fc-toolbar-chunk {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+
+    #campaignCalendar .fc-event {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+    }
+}

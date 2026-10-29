@@ -52,6 +52,10 @@ class Message(db.Model):
 
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=_utcnow, onupdate=_utcnow)
+    is_follow_up = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    
+    # ✅ NOUVEAU : Indique si ce message est la version B de l'A/B test
+    is_variant_b = db.Column(db.Boolean, nullable=False, default=False, index=True)
 
     # ----- Relations -----
     campaign = db.relationship("Campaign", back_populates="messages")

@@ -32,7 +32,8 @@ class Template(db.Model):
     # ----- Relations -----
     business = db.relationship("Business", back_populates="templates")
     campaigns = db.relationship(
-        "Campaign",
+        "Campaign", 
+        foreign_keys="Campaign.template_id",  # ✅ LIGNE À AJOUTER
         back_populates="template",
         passive_deletes=True,
         lazy="dynamic",

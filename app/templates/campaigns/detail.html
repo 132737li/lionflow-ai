@@ -77,6 +77,12 @@ endblock %} {% block content %}
                 {{ campaign.media_file.media_type }}
               </span>
             </div>
+            <a
+              href="{{ url_for('campaigns.export_pdf', campaign_id=campaign.id) }}"
+              class="btn btn-outline-danger"
+            >
+              <i class="bi bi-file-earmark-pdf"></i> Exporter en PDF
+            </a>
 
             <a
               href="{{ url_for('media.detail', media_id=campaign.media_file.id) }}"
@@ -297,7 +303,62 @@ endblock %} {% block content %}
       >Voir tous</a
     >
   </div>
-  {% if messages %}
+  {% if ab_stats %}
+  <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
+    <div class="card-header bg-primary bg-opacity-10">
+      <h5 class="mb-0 text-primary">
+        <i class="bi bi-bar-chart-line"></i> Résultats de l'A/B Test
+      </h5>
+    </div>
+    <div class="card-body">
+      <div class="row text-center align-items-center">
+        <div class="col-md-5">
+          <h6 class="fw-bold">Variante A</h6>
+          <div class="progress mb-2" style="height: 20px">
+            <div
+              class="progress-bar bg-secondary"
+              style="width: {{ ab_stats.a_rate }}%;"
+            >
+              {{ ab_stats.a_rate }}%
+            </div>
+          </div>
+          <small class="text-muted"
+            >{{ ab_stats.a_read }} lus sur {{ ab_stats.a_sent }} envoyés</small
+          >
+        </div>
+
+        <div class="col-md-2">
+          {% if ab_stats.winner == 'A' %}
+          <span class="badge bg-success fs-6"
+            ><i class="bi bi-trophy"></i> Gagnant A</span
+          >
+          {% elif ab_stats.winner == 'B' %}
+          <span class="badge bg-success fs-6"
+            ><i class="bi bi-trophy"></i> Gagnant B</span
+          >
+          {% else %}
+          <span class="badge bg-secondary fs-6">Égalité</span>
+          {% endif %}
+        </div>
+
+        <div class="col-md-5">
+          <h6 class="fw-bold">Variante B</h6>
+          <div class="progress mb-2" style="height: 20px">
+            <div
+              class="progress-bar bg-primary"
+              style="width: {{ ab_stats.b_rate }}%;"
+            >
+              {{ ab_stats.b_rate }}%
+            </div>
+          </div>
+          <small class="text-muted"
+            >{{ ab_stats.b_read }} lus sur {{ ab_stats.b_sent }} envoyés</small
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %} {% if messages %}
   <div class="table-responsive">
     <table class="table table-sm table-hover align-middle mb-0">
       <thead class="table-light">

@@ -1,75 +1,175 @@
-{% extends "base.html" %}
-{% block title %}{{ 'Modifier' if business else 'Nouvelle' }} entreprise — LionFlow AI{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}{{ 'Modifier' if business else
+'Nouvelle' }} entreprise — LionFlow AI{% endblock %} {% block content %}
 <div class="d-flex align-items-center mb-4">
-    <a href="{{ url_for('businesses.list_businesses') }}" class="btn btn-link text-decoration-none">
-        <i class="bi bi-arrow-left"></i>
-    </a>
-    <h1 class="h3 mb-0">
-        {{ 'Modifier l\'entreprise' if business else 'Nouvelle entreprise' }}
-    </h1>
+  <a
+    href="{{ url_for('businesses.list_businesses') }}"
+    class="btn btn-link text-decoration-none"
+  >
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h1 class="h3 mb-0">
+    {{ 'Modifier l\'entreprise' if business else 'Nouvelle entreprise' }}
+  </h1>
 </div>
 
 <div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card lf-stat-card">
-            <div class="card-body p-4">
-                <form method="POST" enctype="multipart/form-data" novalidate>
-                    {{ form.hidden_tag() }}
+  <div class="col-lg-8">
+    <div class="card lf-stat-card">
+      <div class="card-body p-4">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+          {{ form.hidden_tag() }}
 
-                    <div class="mb-3">
-                        {{ form.name.label(class="form-label") }} <span class="text-danger">*</span>
-                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
-                        {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
+          <div class="mb-3">
+            {{ form.name.label(class="form-label") }}
+            <span class="text-danger">*</span> {{ form.name(class="form-control"
+            + (" is-invalid" if form.name.errors else "")) }} {% for e in
+            form.name.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.email.label(class="form-label") }}
-                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
-                            {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.phone.label(class="form-label") }}
-                            {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""),
-                                          placeholder="79 123 456") }}
-                            {% for e in form.phone.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                            <div class="form-text">Numéro international accepté. Le pays sélectionné ci-dessous définit l'indicatif par défaut.</div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        {{ form.address.label(class="form-label") }}
-                        {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else "")) }}
-                        {% for e in form.address.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            {{ form.country.label(class="form-label") }}
-                            {{ form.country(class="form-select" + (" is-invalid" if form.country.errors else "")) }}
-                            {% for e in form.country.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            {{ form.logo.label(class="form-label") }}
-                            {{ form.logo(class="form-control", accept="image/*") }}
-                            {% if business and business.logo_path %}
-                            <div class="mt-2">
-                                <img src="{{ url_for('static', filename=business.logo_path) }}"
-                                     alt="Logo actuel" style="height: 48px;" class="rounded">
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="{{ url_for('businesses.list_businesses') }}" class="btn btn-light">Annuler</a>
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
-                </form>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ form.email.label(class="form-label") }} {{
+              form.email(class="form-control" + (" is-invalid" if
+              form.email.errors else "")) }} {% for e in form.email.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
             </div>
-        </div>
+            <div class="col-md-6 mb-3">
+              {{ form.phone.label(class="form-label") }} {{
+              form.phone(class="form-control" + (" is-invalid" if
+              form.phone.errors else ""), placeholder="79 123 456") }} {% for e
+              in form.phone.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+              <div class="form-text">
+                Numéro international accepté. Le pays sélectionné ci-dessous
+                définit l'indicatif par défaut.
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            {{ form.address.label(class="form-label") }} {{
+            form.address(class="form-control" + (" is-invalid" if
+            form.address.errors else "")) }} {% for e in form.address.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              {{ form.country.label(class="form-label") }} {{
+              form.country(class="form-select" + (" is-invalid" if
+              form.country.errors else "")) }} {% for e in form.country.errors
+              %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6 mb-3">
+              {{ form.logo.label(class="form-label") }} {{
+              form.logo(class="form-control", accept="image/*") }} {% if
+              business and business.logo_path %}
+              <div class="mt-2">
+                <img
+                  src="{{ url_for('static', filename=business.logo_path) }}"
+                  alt="Logo actuel"
+                  style="height: 48px"
+                  class="rounded"
+                />
+              </div>
+              {% endif %}
+            </div>
+            {# ✅ NOUVEAU : WHITE-LABEL #}
+            <div class="card bg-light mb-3 border-0 mt-4">
+              <div class="card-body">
+                <h6 class="fw-bold text-primary mb-3">
+                  <i class="bi bi-palette"></i> Personnalisation (White-Label)
+                </h6>
+
+                <div class="mb-3">
+                  {{ form.app_name.label(class="form-label") }} {{
+                  form.app_name(class="form-control", placeholder="Ex: Mon
+                  Application") }}
+                  <div class="form-text">
+                    Le nom qui remplacera "LionFlow AI" dans le menu.
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    {{ form.primary_color.label(class="form-label") }}
+                    <div class="input-group">
+                      <input
+                        type="color"
+                        class="form-control form-control-color"
+                        id="primaryPicker"
+                        value="{{ form.primary_color.data or '#10b981' }}"
+                      />
+                      {{ form.primary_color(class="form-control",
+                      id="primaryInput") }}
+                    </div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    {{ form.secondary_color.label(class="form-label") }}
+                    <div class="input-group">
+                      <input
+                        type="color"
+                        class="form-control form-control-color"
+                        id="secondaryPicker"
+                        value="{{ form.secondary_color.data or '#0ea5e9' }}"
+                      />
+                      {{ form.secondary_color(class="form-control",
+                      id="secondaryInput") }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <a
+              href="{{ url_for('businesses.list_businesses') }}"
+              class="btn btn-light"
+              >Annuler</a
+            >
+            {{ form.submit(class="btn btn-primary") }}
+          </div>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const primaryPicker = document.getElementById("primaryPicker");
+    const primaryInput = document.getElementById("primaryInput");
+    const secondaryPicker = document.getElementById("secondaryPicker");
+    const secondaryInput = document.getElementById("secondaryInput");
+
+    if (primaryPicker && primaryInput) {
+      primaryPicker.addEventListener(
+        "input",
+        (e) => (primaryInput.value = e.target.value),
+      );
+      primaryInput.addEventListener(
+        "input",
+        (e) => (primaryPicker.value = e.target.value),
+      );
+    }
+    if (secondaryPicker && secondaryInput) {
+      secondaryPicker.addEventListener(
+        "input",
+        (e) => (secondaryInput.value = e.target.value),
+      );
+      secondaryInput.addEventListener(
+        "input",
+        (e) => (secondaryPicker.value = e.target.value),
+      );
+    }
+  });
+</script>
 {% endblock %}

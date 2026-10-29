@@ -160,10 +160,7 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
         </div>
         <div class="h4 mb-0">{{ delivery_rate }}%</div>
         <div class="progress mt-2" style="height: 5px">
-          <div
-            class="progress-bar bg-info"
-            style="width: {{ delivery_rate }}%"
-          ></div>
+          <div class="progress-bar bg-info" style="width: {{ delivery_rate }}%"></div>
         </div>
       </div>
     </div>
@@ -176,10 +173,7 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
         </div>
         <div class="h4 mb-0">{{ read_rate }}%</div>
         <div class="progress mt-2" style="height: 5px">
-          <div
-            class="progress-bar bg-success"
-            style="width: {{ read_rate }}%"
-          ></div>
+          <div class="progress-bar bg-success" style="width: {{ read_rate }}%"></div>
         </div>
       </div>
     </div>
@@ -192,10 +186,7 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
         </div>
         <div class="h4 mb-0">{{ failure_rate }}%</div>
         <div class="progress mt-2" style="height: 5px">
-          <div
-            class="progress-bar bg-danger"
-            style="width: {{ failure_rate }}%"
-          ></div>
+          <div class="progress-bar bg-danger" style="width: {{ failure_rate }}%"></div>
         </div>
       </div>
     </div>
@@ -215,6 +206,69 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
   </div>
 </div>
 
+{# ============ ✅ NOUVELLES STATISTIQUES (CORRIGÉES) ============ #}
+<div class="row g-3 mb-4">
+  {# Efficacité des relances #}
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Efficacité des relances</h5></div>
+      <div class="card-body">
+        <!-- ✅ FIX : Hauteur fixe pour éviter le graphique géant -->
+        <div style="position: relative; height: 180px; width: 100%;">
+            <canvas id="chartFollowUps"></canvas>
+        </div>
+        <div class="mt-3 text-center small">
+            <div class="d-flex justify-content-between border-bottom pb-1 mb-1">
+                <span class="text-muted">Message initial</span>
+                <span class="fw-bold">{{ follow_up_stats.initial.rate }}% lus</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Relance auto</span>
+                <span class="fw-bold text-success">{{ follow_up_stats.followup.rate }}% lus</span>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Répartition Géographique #}
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-globe-americas"></i> Répartition géographique</h5></div>
+      <div class="card-body">
+        <!-- ✅ FIX : Hauteur fixe -->
+        <div style="position: relative; height: 180px; width: 100%;">
+            <canvas id="chartGeography"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Top Campagnes #}
+  <div class="col-lg-4">
+    <div class="card lf-stat-card h-100">
+      <div class="card-header bg-white"><h5 class="mb-0"><i class="bi bi-trophy"></i> Meilleures campagnes</h5></div>
+      <div class="card-body p-0">
+        {% if top_campaigns %}
+        <ul class="list-group list-group-flush">
+          {% for c in top_campaigns %}
+          <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <div class="text-truncate" style="max-width: 60%">
+              <a href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}" class="text-decoration-none fw-semibold small text-dark">{{ c.name }}</a>
+              <div class="text-muted small">{{ c.read }} lus / {{ c.sent }} envoyés</div>
+            </div>
+            <span class="badge bg-success rounded-pill">{{ c.rate }}%</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <div class="p-4 text-center text-muted small">Aucune campagne terminée pour le moment.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ============ GRAPHIQUES PRINCIPAUX ============ #}
 <div class="row g-3 mb-4">
   <div class="col-lg-8">
@@ -223,9 +277,6 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
         class="card-header bg-white d-flex justify-content-between align-items-center"
       >
         <h5 class="mb-0">Messages (30 derniers jours)</h5>
-        <span class="badge bg-success-subtle text-success-emphasis">
-          <i class="bi bi-clock"></i> Temps réel
-        </span>
       </div>
       <div class="card-body">
         <canvas id="chartMessagesPerDay" height="90"></canvas>
@@ -280,27 +331,16 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
           <li class="list-group-item d-flex align-items-center gap-3">
             <div
               class="lf-stat-icon bg-primary-subtle text-primary"
-              style="
-                width: 36px;
-                height: 36px;
-                font-size: 0.9rem;
-                font-weight: 600;
-              "
+              style="width: 36px; height: 36px; font-size: 0.9rem; font-weight: 600;"
             >
               {{ c.full_name[:1]|upper }}
             </div>
             <div class="flex-grow-1 min-width-0">
-              <div class="fw-semibold small text-truncate">
-                {{ c.full_name }}
-              </div>
-              <div class="text-muted small">
-                {{ c.total_messages }} messages
-              </div>
+              <div class="fw-semibold small text-truncate">{{ c.full_name }}</div>
+              <div class="text-muted small">{{ c.total_messages }} messages</div>
             </div>
             <div class="text-end">
-              <div class="small fw-semibold text-success">
-                {{ c.read_rate }}%
-              </div>
+              <div class="small fw-semibold text-success">{{ c.read_rate }}%</div>
               <div class="text-muted" style="font-size: 0.7rem">lus</div>
             </div>
           </li>
@@ -336,22 +376,17 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
     <div class="card lf-stat-card h-100">
       <div class="card-header bg-white">
         <h5 class="mb-0">
-          <i class="bi bi-clock-history"></i> {{ t('dashboard.recent_activity')
-          }}
+          <i class="bi bi-clock-history"></i> {{ t('dashboard.recent_activity') }}
         </h5>
       </div>
       <div class="card-body p-0">
         {% if recent_activity %}
         <ul class="list-group list-group-flush">
           {% for log in recent_activity %}
-          <li
-            class="list-group-item d-flex justify-content-between align-items-start py-2"
-          >
+          <li class="list-group-item d-flex justify-content-between align-items-start py-2">
             <div class="flex-grow-1 min-width-0">
               <div class="small fw-semibold">{{ log.action }}</div>
-              <div class="text-muted small text-truncate">
-                {{ log.description or '' }}
-              </div>
+              <div class="text-muted small text-truncate">{{ log.description or '' }}</div>
             </div>
             <div class="text-muted small ms-2 text-nowrap">
               {{ log.created_at[11:16] if log.created_at else '' }}
@@ -360,9 +395,7 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
           {% endfor %}
         </ul>
         {% else %}
-        <div class="p-4 text-center text-muted small">
-          Aucune activité récente.
-        </div>
+        <div class="p-4 text-center text-muted small">Aucune activité récente.</div>
         {% endif %}
       </div>
     </div>
@@ -370,35 +403,19 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
 
   <div class="col-lg-4">
     <div class="card lf-stat-card h-100">
-      <div
-        class="card-header bg-white d-flex justify-content-between align-items-center"
-      >
-        <h5 class="mb-0">
-          <i class="bi bi-megaphone"></i> {{ t('dashboard.recent_campaigns') }}
-        </h5>
-        <a
-          href="{{ url_for('campaigns.list_campaigns') }}"
-          class="small text-decoration-none"
-          >Voir tout</a
-        >
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-megaphone"></i> {{ t('dashboard.recent_campaigns') }}</h5>
+        <a href="{{ url_for('campaigns.list_campaigns') }}" class="small text-decoration-none">Voir tout</a>
       </div>
       <div class="card-body p-0">
         {% if recent_campaigns %}
         <ul class="list-group list-group-flush">
           {% for c in recent_campaigns %}
-          <li
-            class="list-group-item d-flex justify-content-between align-items-center"
-          >
+          <li class="list-group-item d-flex justify-content-between align-items-center">
             <div class="text-truncate" style="max-width: 65%">
-              <a
-                href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}"
-                class="text-decoration-none fw-semibold small"
-                >{{ c.name }}</a
-              >
+              <a href="{{ url_for('campaigns.detail_campaign', campaign_id=c.id) }}" class="text-decoration-none fw-semibold small">{{ c.name }}</a>
             </div>
-            <span
-              class="badge {% if c.status == 'completed' %}bg-success {% elif c.status == 'running' %}bg-primary {% elif c.status == 'scheduled' %}bg-info {% elif c.status == 'paused' %}bg-warning {% elif c.status == 'cancelled' %}bg-danger {% else %}bg-secondary{% endif %}"
-            >
+            <span class="badge {% if c.status == 'completed' %}bg-success {% elif c.status == 'running' %}bg-primary {% elif c.status == 'scheduled' %}bg-info {% elif c.status == 'paused' %}bg-warning {% elif c.status == 'cancelled' %}bg-danger {% else %}bg-secondary{% endif %}">
               {{ c.status }}
             </span>
           </li>
@@ -413,17 +430,9 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
 
   <div class="col-lg-4">
     <div class="card lf-stat-card h-100">
-      <div
-        class="card-header bg-white d-flex justify-content-between align-items-center"
-      >
-        <h5 class="mb-0">
-          <i class="bi bi-envelope"></i> {{ t('dashboard.recent_messages') }}
-        </h5>
-        <a
-          href="{{ url_for('messages.list_messages') }}"
-          class="small text-decoration-none"
-          >Voir tout</a
-        >
+      <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-envelope"></i> {{ t('dashboard.recent_messages') }}</h5>
+        <a href="{{ url_for('messages.list_messages') }}" class="small text-decoration-none">Voir tout</a>
       </div>
       <div class="card-body p-0">
         {% if recent_messages %}
@@ -433,13 +442,9 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
             <div class="d-flex justify-content-between align-items-start">
               <div class="text-truncate" style="max-width: 70%">
                 <div class="fw-semibold small">{{ m.contact_name }}</div>
-                <div class="text-muted small text-truncate">
-                  {{ m.content[:50] if m.content else '' }}
-                </div>
+                <div class="text-muted small text-truncate">{{ m.content[:50] if m.content else '' }}</div>
               </div>
-              <span
-                class="badge {% if m.status == 'read' %}bg-success {% elif m.status == 'delivered' %}bg-info {% elif m.status == 'sent' %}bg-primary {% elif m.status == 'failed' %}bg-danger {% else %}bg-secondary{% endif %}"
-              >
+              <span class="badge {% if m.status == 'read' %}bg-success {% elif m.status == 'delivered' %}bg-info {% elif m.status == 'sent' %}bg-primary {% elif m.status == 'failed' %}bg-danger {% else %}bg-secondary{% endif %}">
                 {{ m.status }}
               </span>
             </div>
@@ -471,7 +476,9 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
     {% endfor %}
   </div>
 </div>
-{% endif %} {% endblock %} {% block scripts %}
+{% endif %} {% endblock %} 
+
+{% block scripts %}
 <script>
   // ============================================
   // DONNÉES INJECTÉES
@@ -480,149 +487,122 @@ AI{% endblock %} {% block content %} {# ============ EN-TÊTE ============ #}
   const MSGS_BY_STATUS = {{ msgs_status|tojson }};
   const CONTACTS_EVO = {{ contacts_evo|tojson }};
   const MSGS_PER_HOUR = {{ msgs_per_hour|tojson }};
+  
+  const FOLLOW_UP_STATS = {{ follow_up_stats|tojson }};
+  const GEO_STATS = {{ geo_stats|tojson }};
 
   // ============================================
-  // GRAPHIQUE — Messages par jour
+  // NOUVEAU GRAPHIQUE — Relances
   // ============================================
-  new Chart(document.getElementById('chartMessagesPerDay'), {
-      type: 'line',
-      data: {
-          labels: MSGS_PER_DAY.labels,
-          datasets: [
-              {
-                  label: 'Envoyés',
-                  data: MSGS_PER_DAY.sent,
-                  borderColor: '#10b981',
-                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                  fill: true,
-                  tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 5,
-              },
-              {
-                  label: 'Lus',
-                  data: MSGS_PER_DAY.read,
-                  borderColor: '#0ea5e9',
-                  backgroundColor: 'rgba(14, 165, 233, 0.05)',
-                  fill: true,
-                  tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 5,
-              },
-              {
-                  label: 'Échoués',
-                  data: MSGS_PER_DAY.failed,
-                  borderColor: '#ef4444',
-                  backgroundColor: 'rgba(239, 68, 68, 0.05)',
-                  fill: true,
-                  tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 5,
-              },
-          ]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } },
+  const followUpCtx = document.getElementById('chartFollowUps');
+  if (followUpCtx) {
+      new Chart(followUpCtx, {
+          type: 'bar',
+          data: {
+              labels: ['Initial', 'Relance'],
+              datasets: [{
+                  data: [FOLLOW_UP_STATS.initial.total, FOLLOW_UP_STATS.followup.total],
+                  backgroundColor: ['#3b82f6', '#10b981'],
+                  borderRadius: 6,
+              }]
           },
-          scales: {
-              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-              x: { grid: { display: false } },
-          },
-      }
-  });
+          options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+          }
+      });
+  }
 
   // ============================================
-  // GRAPHIQUE — Statuts
+  // NOUVEAU GRAPHIQUE — Géographie
   // ============================================
-  new Chart(document.getElementById('chartMessagesByStatus'), {
-      type: 'doughnut',
-      data: {
-          labels: MSGS_BY_STATUS.labels,
-          datasets: [{
-              data: MSGS_BY_STATUS.values,
-              backgroundColor: ['#94a3b8', '#3b82f6', '#0ea5e9', '#10b981', '#ef4444'],
-              borderWidth: 0,
-          }]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '60%',
-          plugins: {
-              legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } },
+  const geoCtx = document.getElementById('chartGeography');
+  if (geoCtx) {
+      // ✅ Sécurité : si pas de données, on affiche une valeur par défaut pour éviter un crash
+      const geoValues = GEO_STATS.values.length > 0 ? GEO_STATS.values : [1];
+      const geoLabels = GEO_STATS.labels.length > 0 ? GEO_STATS.labels : ["Aucune donnée"];
+
+      new Chart(geoCtx, {
+          type: 'doughnut',
+          data: {
+              labels: geoLabels,
+              datasets: [{
+                  data: geoValues,
+                  backgroundColor: GEO_STATS.values.length > 0 ? ['#10b981', '#0ea5e9', '#f59e0b', '#ef4444', '#8b5cf6'] : ['#e2e8f0'],
+                  borderWidth: 0,
+              }]
           },
-      }
-  });
+          options: {
+              responsive: true, maintainAspectRatio: false, cutout: '65%',
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } }
+          }
+      });
+  }
 
   // ============================================
-  // GRAPHIQUE — Contacts
+  // GRAPHIQUE — Messages par jour (Existant)
   // ============================================
-  new Chart(document.getElementById('chartContactsEvolution'), {
-      type: 'bar',
-      data: {
-          labels: CONTACTS_EVO.labels,
-          datasets: [{
-              label: 'Contacts (cumul)',
-              data: CONTACTS_EVO.values,
-              backgroundColor: 'rgba(245, 158, 11, 0.7)',
-              borderRadius: 6,
-          }]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-              x: { grid: { display: false } },
+  const msgsDayCtx = document.getElementById('chartMessagesPerDay');
+  if (msgsDayCtx) {
+      new Chart(msgsDayCtx, {
+          type: 'line',
+          data: {
+              labels: MSGS_PER_DAY.labels,
+              datasets: [
+                  { label: 'Envoyés', data: MSGS_PER_DAY.sent, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.35, pointRadius: 0 },
+                  { label: 'Lus', data: MSGS_PER_DAY.read, borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.05)', fill: true, tension: 0.35, pointRadius: 0 },
+                  { label: 'Échoués', data: MSGS_PER_DAY.failed, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.05)', fill: true, tension: 0.35, pointRadius: 0 },
+              ]
           },
-      }
-  });
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+  }
 
   // ============================================
-  // GRAPHIQUE — Distribution par heure
+  // GRAPHIQUE — Statuts (Existant)
   // ============================================
-  const hourLabels = MSGS_PER_HOUR.labels;
-  const hourValues = MSGS_PER_HOUR.values;
-  const bestHour = MSGS_PER_HOUR.best_hour;
-
-  const hourColors = hourLabels.map((_, i) =>
-      i === bestHour ? '#f59e0b' : 'rgba(16, 185, 129, 0.6)'
-  );
-
-  new Chart(document.getElementById('chartMessagesPerHour'), {
-      type: 'bar',
-      data: {
-          labels: hourLabels,
-          datasets: [{
-              label: 'Messages envoyés',
-              data: hourValues,
-              backgroundColor: hourColors,
-              borderRadius: 4,
-          }]
-      },
-      options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-              legend: { display: false },
-              tooltip: {
-                  callbacks: {
-                      label: (ctx) => `${ctx.parsed.y} message(s)`
-                  }
-              }
+  const statusCtx = document.getElementById('chartMessagesByStatus');
+  if (statusCtx) {
+      new Chart(statusCtx, {
+          type: 'doughnut',
+          data: {
+              labels: MSGS_BY_STATUS.labels,
+              datasets: [{ data: MSGS_BY_STATUS.values, backgroundColor: ['#94a3b8', '#3b82f6', '#0ea5e9', '#10b981', '#ef4444'], borderWidth: 0 }]
           },
-          scales: {
-              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(0,0,0,0.05)' } },
-              x: {
-                  grid: { display: false },
-                  ticks: { font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }
-              },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+      });
+  }
+
+  // ============================================
+  // GRAPHIQUE — Contacts (Existant)
+  // ============================================
+  const contactsCtx = document.getElementById('chartContactsEvolution');
+  if (contactsCtx) {
+      new Chart(contactsCtx, {
+          type: 'bar',
+          data: {
+              labels: CONTACTS_EVO.labels,
+              datasets: [{ label: 'Contacts (cumul)', data: CONTACTS_EVO.values, backgroundColor: 'rgba(245, 158, 11, 0.7)', borderRadius: 6 }]
           },
-      }
-  });
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+  }
+
+  // ============================================
+  // GRAPHIQUE — Distribution par heure (Existant)
+  // ============================================
+  const hourCtx = document.getElementById('chartMessagesPerHour');
+  if (hourCtx) {
+      const hourColors = MSGS_PER_HOUR.labels.map((_, i) => i === MSGS_PER_HOUR.best_hour ? '#f59e0b' : 'rgba(16, 185, 129, 0.6)');
+      new Chart(hourCtx, {
+          type: 'bar',
+          data: {
+              labels: MSGS_PER_HOUR.labels,
+              datasets: [{ label: 'Messages', data: MSGS_PER_HOUR.values, backgroundColor: hourColors, borderRadius: 4 }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+      });
+  }
 </script>
 {% endblock %}

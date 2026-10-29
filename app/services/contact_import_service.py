@@ -1,7 +1,11 @@
 """
 Service d'import de contacts depuis CSV ou Excel.
 Retourne un rapport détaillé (lignes, ajoutés, doublons, erreurs).
+
+✅ FIX 1 : lecture en `dtype=str` pour préserver le "+" des numéros internationaux.
+✅ FIX 2 : indicatif Burundi (+257) utilisé par défaut si pas de "+".
 """
+
 import os
 import re
 import tempfile
@@ -27,6 +31,10 @@ COLUMN_ALIASES = {
     "status": {"status", "statut", "state"},
 }
 
+# 🎯 Indicatif par défaut si le numéro n'a pas de préfixe international
+DEFAULT_PHONE_REGION = "BI"          # ISO 3166-1 alpha-2 du Burundi
+DEFAULT_PHONE_CALLING_CODE = "257"   # Code téléphonique international
+
 
 @dataclass
 class ImportReport:
@@ -34,7 +42,7 @@ class ImportReport:
     total_rows: int = 0
     added: int = 0
     duplicates: int = 0
-    errors: list = field(default_factory=list)  # [{row: int, message: str, data: dict}]
+    errors: list = field(default_factory=list)  # [{row, message, data}]
     detected_columns: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
@@ -43,7 +51,7 @@ class ImportReport:
             "added": self.added,
             "duplicates": self.duplicates,
             "errors_count": len(self.errors),
-            "errors": self.errors[:100],  # limite sécurité
+            "errors": self.errors[:100],
             "detected_columns": self.detected_columns,
         }
 
@@ -61,7 +69,6 @@ class ContactImportService:
         """
         report = ImportReport()
 
-        # Extension
         if not file_storage or not file_storage.filename:
             report.errors.append({"row": 0, "message": "Aucun fichier fourni.", "data": {}})
             return report
@@ -75,7 +82,6 @@ class ContactImportService:
             })
             return report
 
-        # Écriture dans un fichier temporaire
         tmp_fd, tmp_path = tempfile.mkstemp(suffix=f".{ext}")
         os.close(tmp_fd)
         try:
@@ -99,7 +105,6 @@ class ContactImportService:
             report.errors.append({"row": 0, "message": "Fichier vide.", "data": {}})
             return report
 
-        # Limite dure
         if len(df) > max_rows:
             report.errors.append({
                 "row": 0,
@@ -148,7 +153,6 @@ class ContactImportService:
         seen_in_file: set[str] = set()
 
         for idx, raw in df.iterrows():
-            # Ligne → dict normalisé
             row_dict = ContactImportService._normalize_row(raw, col_map)
             row_number = int(idx) + 2  # +1 (0-index) +1 (header)
 
@@ -161,16 +165,22 @@ class ContactImportService:
                 })
                 continue
 
-            normalized = normalize_phone(phone)
+            # ✅ Normalisation avec indicatif Burundi par défaut
+            normalized = ContactImportService._normalize_import_phone(phone)
             if not normalized:
                 report.errors.append({
                     "row": row_number,
-                    "message": f"Numéro invalide : {phone}",
+                    "message": (
+                        f"Numéro invalide : {phone}. "
+                        "Format attendu : '+<indicatif><numéro>' "
+                        "(ex: +25776672387, +33611111111) ou "
+                        "numéro local burundais (ex: 76672387)."
+                    ),
                     "data": row_dict,
                 })
                 continue
 
-            # Doublons (dans la BDD ou dans le fichier)
+            # Doublons (BDD ou fichier)
             if normalized in existing_phones:
                 report.duplicates += 1
                 continue
@@ -190,7 +200,7 @@ class ContactImportService:
             # Email optionnel mais validé
             email = row_dict.get("email") or None
             if email and not is_valid_email(email):
-                email = None  # on ignore silencieusement mais on note en warning
+                email = None
                 report.errors.append({
                     "row": row_number,
                     "message": f"Email invalide ignoré : {row_dict.get('email')}",
@@ -220,32 +230,113 @@ class ContactImportService:
             to_insert.append(contact)
             seen_in_file.add(normalized)
 
-        # Insertion
         if to_insert:
             db.session.bulk_save_objects(to_insert)
             db.session.commit()
             report.added = len(to_insert)
-
+            
+            # À la fin de import_file()
+            try:
+                max_contacts = business.plan_config.get("max_contacts", 0)
+                if max_contacts > 0:
+                    total = Contact.query.filter_by(business_id=business.id).count()
+                    if total >= max_contacts * 0.9:
+                        from app.services.email_service import EmailService
+                        EmailService.send_quota_warning(business, used=total, limit=max_contacts) # 👈 Bon nom
+            except Exception:
+                current_app.logger.exception("[import] Erreur envoi alerte quota")
+            
         return report
+
+    # ==================================================
+    # NORMALISATION TÉLÉPHONE (indicatif Burundi par défaut)
+    # ==================================================
+    @staticmethod
+    def _normalize_import_phone(phone: str) -> str | None:
+        """
+        Normalise un numéro importé en format E.164.
+
+        Règles :
+        1. Si contient '+', on respecte l'indicatif international.
+        2. Si commence par '257' (indicatif Burundi sans '+'), on ajoute le '+'.
+        3. Sinon, on suppose que c'est un numéro local burundais (+257 par défaut).
+
+        Exemples :
+            "+33611111111"   → "+33611111111"   (France)
+            "+25776672387"   → "+25776672387"   (Burundi)
+            "25776672387"    → "+25776672387"   (Burundi, auto-préfixé)
+            "76672387"       → "+25776672387"   (Burundi local)
+            "33611111111"    → None             (ambigu, rejeté)
+        """
+        if not phone:
+            return None
+
+        phone = str(phone).strip()
+        if not phone:
+            return None
+
+        # Retire les espaces, points, tirets (mais garde le '+')
+        phone = re.sub(r"[\s.\-()]", "", phone)
+
+        # Cas 1 : numéro international explicite
+        if phone.startswith("+"):
+            return normalize_phone(phone, default_region=DEFAULT_PHONE_REGION)
+
+        # Cas 2 : commence par l'indicatif Burundi sans '+'
+        if phone.startswith(DEFAULT_PHONE_CALLING_CODE) and len(phone) > 8:
+            return normalize_phone(
+                "+" + phone, default_region=DEFAULT_PHONE_REGION
+            )
+
+        # Cas 3 : numéro local burundais (ex: 76672387)
+        return normalize_phone(phone, default_region=DEFAULT_PHONE_REGION)
 
     # ==================================================
     # LECTURE FICHIER
     # ==================================================
     @staticmethod
     def _read_dataframe(path: str, ext: str) -> pd.DataFrame | None:
+        """
+        Lit un fichier CSV ou Excel en préservant les chaînes brutes
+        (dtype=str) afin de ne pas perdre le '+' initial des numéros
+        internationaux ni les zéros de tête.
+        """
         if ext == "csv":
-            # Essais successifs d'encodage + séparateur
             for encoding in ("utf-8-sig", "utf-8", "latin-1", "cp1252"):
                 for sep in (None, ",", ";", "\t"):
                     try:
                         if sep is None:
-                            return pd.read_csv(path, encoding=encoding, sep=None, engine="python")
-                        return pd.read_csv(path, encoding=encoding, sep=sep)
+                            df = pd.read_csv(
+                                path,
+                                encoding=encoding,
+                                sep=None,
+                                engine="python",
+                                dtype=str,             # ✅ préserve le '+'
+                                keep_default_na=False, # évite que '' devienne NaN
+                            )
+                        else:
+                            df = pd.read_csv(
+                                path,
+                                encoding=encoding,
+                                sep=sep,
+                                dtype=str,             # ✅
+                                keep_default_na=False,
+                            )
+                        if df is not None and len(df.columns) >= 1:
+                            return df
                     except Exception:
                         continue
             return None
         # Excel
-        return pd.read_excel(path, engine="openpyxl" if ext == "xlsx" else "xlrd")
+        try:
+            return pd.read_excel(
+                path,
+                engine="openpyxl" if ext == "xlsx" else "xlrd",
+                dtype=str,                                 # ✅
+            )
+        except Exception:
+            current_app.logger.exception("Erreur lecture Excel")
+            return None
 
     # ==================================================
     # DÉTECTION COLONNES
@@ -253,7 +344,6 @@ class ContactImportService:
     @staticmethod
     def _normalize_header(h: str) -> str:
         h = str(h).strip().lower()
-        # retire accents simples
         h = (h.replace("é", "e").replace("è", "e").replace("ê", "e")
                .replace("à", "a").replace("ô", "o").replace("û", "u")
                .replace("ç", "c").replace("î", "i"))
@@ -264,32 +354,48 @@ class ContactImportService:
     def _detect_columns(headers: list[str]) -> dict:
         """
         Retourne {'colonne_originale': 'champ_cible'}.
-        Exemple : {'Téléphone': 'phone', 'Prénom': 'first_name'}
+        Ex: {'Téléphone': 'phone', 'Prénom': 'first_name'}
         """
         result = {}
         for h in headers:
             norm = ContactImportService._normalize_header(h)
             for target, aliases in COLUMN_ALIASES.items():
-                if norm in aliases or norm in {ContactImportService._normalize_header(a) for a in aliases}:
+                if norm in aliases or norm in {
+                    ContactImportService._normalize_header(a) for a in aliases
+                }:
                     result[h] = target
                     break
         return result
 
     @staticmethod
     def _normalize_row(raw: pd.Series, col_map: dict) -> dict:
-        """Convertit une ligne pandas en dict cible."""
+        """
+        Convertit une ligne pandas en dict cible.
+        Préserve le '+' des numéros internationaux.
+        """
         out = {}
         for original, target in col_map.items():
             value = raw.get(original)
-            if pd.isna(value):
-                value = None
-            if value is not None and not isinstance(value, str):
-                # Pour les numéros type Excel qui deviennent float
-                if isinstance(value, float) and value.is_integer():
-                    value = str(int(value))
-                else:
-                    value = str(value)
-            out[target] = value
+
+            if value is None:
+                out[target] = None
+                continue
+            try:
+                if pd.isna(value):
+                    out[target] = None
+                    continue
+            except (TypeError, ValueError):
+                pass
+
+            # Cellule Excel numérique (rare)
+            if isinstance(value, float) and value.is_integer():
+                value = str(int(value))
+            elif not isinstance(value, str):
+                value = str(value)
+
+            value = value.strip()
+            out[target] = value if value else None
+
         return out
 
     # ==================================================

@@ -28,6 +28,7 @@ class AuthError(Exception):
 
 
 RESET_TOKEN_TTL_MINUTES = 60
+VERIFY_TOKEN_TTL_HOURS = 24
 
 
 def _hash_token(raw: str) -> str:
@@ -47,6 +48,9 @@ class AuthService:
         if User.query.filter_by(email=email).first():
             raise AuthError("Cet email est déjà utilisé.", 409)
 
+        # ✅ NOUVEAU : Génération du token de vérification
+        verify_token = secrets.token_urlsafe(32)
+
         user = User(
             email=email,
             first_name=(data.get("first_name") or "").strip() or None,
@@ -54,6 +58,9 @@ class AuthService:
             role="user",
             is_active=True,
             is_verified=False,
+            # ✅ NOUVEAU : Enregistrement du token
+            verification_token=verify_token,
+            verification_token_exp=_utcnow() + timedelta(hours=VERIFY_TOKEN_TTL_HOURS)
         )
         user.set_password(data.get("password") or "")
         db.session.add(user)
@@ -65,9 +72,9 @@ class AuthService:
             title="Bienvenue sur LionFlow AI 🦁",
             message=(
                 "Votre compte a été créé avec succès. "
-                "Commencez par créer votre entreprise et importer vos contacts."
+                "Veuillez vérifier votre email pour l'activer."
             ),
-            type="success",
+            type="info",
         )
         db.session.add(notif)
         db.session.commit()
@@ -78,12 +85,12 @@ class AuthService:
             user_id=user.id,
         )
 
-        # Email de bienvenue (non bloquant)
+        # ✅ NOUVEAU : Envoi de l'email de vérification
         try:
             from app.services.email_service import EmailService
-            EmailService.send_welcome(user)
+            EmailService.send_verification_email(user, verify_token)
         except Exception:
-            current_app.logger.exception("Erreur envoi email de bienvenue")
+            current_app.logger.exception("Erreur envoi email de vérification")
 
         return user
 
@@ -101,6 +108,10 @@ class AuthService:
         if not user.is_active:
             raise AuthError("Votre compte est désactivé.", 403)
 
+        # ✅ NOUVEAU : Blocage si l'email n'est pas vérifié
+        if not user.is_verified:
+            raise AuthError("Veuillez vérifier votre adresse email avant de vous connecter. Consultez votre boîte de réception.", 403)
+
         user.last_login_at = _utcnow()
         db.session.commit()
 
@@ -109,6 +120,43 @@ class AuthService:
             description=f"Connexion réussie : {user.email}",
             user_id=user.id,
         )
+        return user
+
+    # ==================================================
+    # VÉRIFICATION DE L'EMAIL
+    # ==================================================
+    @staticmethod
+    def verify_email(raw_token: str) -> User:
+        """Valide le token de vérification et active le compte."""
+        if not raw_token:
+            raise AuthError("Lien de vérification invalide.", 400)
+            
+        user = User.query.filter_by(verification_token=raw_token).first()
+        
+        if not user:
+            raise AuthError("Lien de vérification invalide.", 400)
+            
+        if user.verification_token_exp < _utcnow():
+            raise AuthError("Ce lien a expiré. Veuillez demander un nouveau lien.", 400)
+
+        user.is_verified = True
+        user.verification_token = None
+        user.verification_token_exp = None
+        db.session.commit()
+        
+        log_activity(
+            action="email_verified",
+            description=f"Email vérifié : {user.email}",
+            user_id=user.id,
+        )
+        
+        # ✅ Envoi de l'email de bienvenue UNIQUEMENT après vérification
+        try:
+            from app.services.email_service import EmailService
+            EmailService.send_welcome(user)
+        except Exception:
+            current_app.logger.exception("Erreur envoi email de bienvenue")
+            
         return user
 
     # ==================================================
@@ -228,13 +276,11 @@ class AuthService:
         """
         from app.services.email_service import EmailService
 
-        # ✅ Utiliser APP_BASE_URL au lieu du host de la requête
         base_url = current_app.config.get(
             "APP_BASE_URL", "http://localhost:5000"
         ).rstrip("/")
         reset_url = f"{base_url}/auth/reset-password/{raw_token}"
 
-        # Envoyer par email
         sent = EmailService.send_password_reset(user, reset_url)
 
         if sent:

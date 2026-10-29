@@ -1,0 +1,73 @@
+{% extends "base.html" %} {% block title %}Demandes de Rôles — Admin{% endblock
+%} {% block content %}
+<div class="container-fluid py-4">
+  <h1 class="h3 mb-4"><i class="bi bi-shield-lock"></i> Demandes de Rôles</h1>
+
+  {% if not requests %}
+  <div class="alert alert-info">Aucune demande en attente.</div>
+  {% else %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Date</th>
+          <th>Entreprise</th>
+          <th>Utilisateur Ciblé</th>
+          <th>Nouveau Rôle</th>
+          <th>Demandé par</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td>{{ req.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ req.business.name }}</td>
+          <td>
+            {{ req.target_user.full_name }}<br />
+            <small class="text-muted">{{ req.target_user.email }}</small>
+          </td>
+          <td>
+            <span class="badge bg-primary">{{ req.requested_role|upper }}</span>
+          </td>
+          <td>
+            {{ req.requested_by.full_name if req.requested_by else 'Système' }}
+          </td>
+          <td>
+            <form
+              action="{{ url_for('admin.process_role_request', req_id=req.id, action='approve') }}"
+              method="POST"
+              class="d-inline"
+            >
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button class="btn btn-sm btn-success">
+                <i class="bi bi-check-lg"></i> Approuver
+              </button>
+            </form>
+            <form
+              action="{{ url_for('admin.process_role_request', req_id=req.id, action='reject') }}"
+              method="POST"
+              class="d-inline"
+            >
+              <input
+                type="hidden"
+                name="csrf_token"
+                value="{{ csrf_token() }}"
+              />
+              <button class="btn btn-sm btn-danger">
+                <i class="bi bi-x-lg"></i> Refuser
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

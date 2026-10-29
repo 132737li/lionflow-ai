@@ -23,6 +23,8 @@ from app.models.payment import Payment
 from app.models.log import Log
 from app.models.chatbot_conversation import ChatbotConversation
 from app.utils.security import log_activity
+from app.models.role_change_request import RoleChangeRequest
+from app.models.business_member import BusinessMember
 
 
 admin_bp = Blueprint("admin", __name__, template_folder="../templates/admin")
@@ -1078,3 +1080,46 @@ def test_email():
         flash(f"❌ Erreur : {result['error']}", "danger")
 
     return redirect(url_for("admin.dashboard"))
+
+# ==================================================
+# DEMANDES DE CHANGEMENT DE RÔLE (NOUVEAU)
+# ==================================================
+@admin_bp.route("/role-requests")
+@login_required
+@admin_required
+def role_requests():
+    """Liste des demandes de changement de rôle en attente."""
+    requests_list = RoleChangeRequest.query.filter_by(status="pending").order_by(RoleChangeRequest.created_at.desc()).all()
+    return render_template("admin/role_requests.html", requests=requests_list)
+
+
+@admin_bp.route("/role-requests/<int:req_id>/<action>", methods=["POST"])
+@login_required
+@admin_required
+def process_role_request(req_id, action):
+    """Approuve ou rejette une demande."""
+    req = RoleChangeRequest.query.get_or_404(req_id)
+    if req.status != "pending":
+        flash("Cette demande a déjà été traitée.", "warning")
+        return redirect(url_for("admin.role_requests"))
+
+    if action == "approve":
+        member = BusinessMember.query.filter_by(business_id=req.business_id, user_id=req.target_user_id).first()
+        if member:
+            member.role = req.requested_role
+            req.status = "approved"
+            flash("Rôle mis à jour avec succès.", "success")
+        else:
+            flash("Erreur : utilisateur introuvable dans l'entreprise.", "danger")
+            req.status = "rejected"
+    elif action == "reject":
+        req.status = "rejected"
+        flash("Demande rejetée.", "info")
+    else:
+        abort(400)
+
+    req.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    req.reviewed_by_id = current_user.id
+    db.session.commit()
+    
+    return redirect(url_for("admin.role_requests"))

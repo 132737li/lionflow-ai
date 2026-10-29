@@ -18,7 +18,7 @@
   <div class="row g-3">
     {# Colonne gauche : paramètres #}
     <div class="col-lg-7">
-      <div class="card lf-stat-card">
+      <div class="card lf-stat-card mb-3">
         <div class="card-header bg-white"><h6 class="mb-0">Paramètres</h6></div>
         <div class="card-body">
           <div class="mb-3">
@@ -66,9 +66,7 @@
                     <div
                       id="mediaThumb"
                       style="width: 80px; height: 80px; flex-shrink: 0"
-                    >
-                      {# L'image ou icône sera injectée ici #}
-                    </div>
+                    ></div>
                     <div class="flex-grow-1 min-width-0">
                       <div
                         class="fw-semibold small text-truncate"
@@ -87,10 +85,22 @@
             </div>
           </div>
 
+          {# ✅ A/B TESTING - CASE À COCHER #}
+          <div class="card bg-light mb-3 border-0">
+            <div class="card-body py-2">
+              <div class="form-check form-switch">
+                {{ form.is_ab_test(class="form-check-input", id="abToggle") }}
+                {{ form.is_ab_test.label(class="form-check-label fw-bold
+                text-primary") }}
+              </div>
+            </div>
+          </div>
+
+          {# ✅ MESSAGE A (ou message principal) #}
           <div class="mb-3">
-            {{ form.message.label(class="form-label") }} {{
+            {{ form.message.label(class="form-label fw-bold") }} {{
             form.message(class="form-control" + (" is-invalid" if
-            form.message.errors else ""), rows=6) }} {% for e in
+            form.message.errors else ""), rows=5) }} {% for e in
             form.message.errors %}
             <div class="invalid-feedback">{{ e }}</div>
             {% endfor %}
@@ -98,6 +108,31 @@
               Variables : <code>{{ '{{prenom}}' }}</code>,
               <code>{{ '{{nom}}' }}</code>,
               <code>{{ '{{entreprise}}' }}</code>
+            </div>
+          </div>
+
+          {# ✅ MESSAGE B (A/B TESTING) #}
+          <div
+            id="abMessageContainer"
+            style="display: {% if form.is_ab_test.data %}block{% else %}none{% endif %};"
+          >
+            <div
+              class="mb-3 p-3 border rounded"
+              style="
+                border-color: #0d6efd !important;
+                background-color: #f0f8ff;
+              "
+            >
+              {{ form.message_b.label(class="form-label text-primary fw-bold")
+              }} {{ form.message_b(class="form-control" + (" is-invalid" if
+              form.message_b.errors else ""), rows=5, placeholder="Variante B du
+              message...") }} {% for e in form.message_b.errors %}
+              <div class="invalid-feedback">{{ e }}</div>
+              {% endfor %}
+              <div class="form-text text-primary">
+                <i class="bi bi-info-circle"></i> Ce message sera envoyé à 50%
+                des contacts.
+              </div>
             </div>
           </div>
 
@@ -110,6 +145,66 @@
             <div class="col-md-6 mb-3">
               {{ form.timezone.label(class="form-label") }} {{
               form.timezone(class="form-select") }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# ✅ CARTE RELANCES AUTOMATIQUES #}
+      <div class="card lf-stat-card border-success border-opacity-25 mb-3">
+        <div class="card-header bg-success bg-opacity-10">
+          <div class="d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 text-success">
+              <i class="bi bi-arrow-repeat"></i> Relance Automatique
+            </h6>
+            <div class="form-check form-switch mb-0">
+              {{ form.follow_up_enabled(class="form-check-input",
+              id="followUpToggle", role="switch") }}
+              <label
+                class="form-check-label text-success fw-bold"
+                for="followUpToggle"
+                >Activer</label
+              >
+            </div>
+          </div>
+        </div>
+        <div
+          class="card-body"
+          id="followUpSettings"
+          style="display: {% if form.follow_up_enabled.data %}block{% else %}none{% endif %};"
+        >
+          <p class="text-muted small mb-3">
+            Si activé, les contacts qui n'auront pas lu le message initial après
+            le délai défini recevront automatiquement cette relance.
+          </p>
+
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              {{ form.follow_up_delay_hours.label(class="form-label") }}
+              <div class="input-group">
+                {{ form.follow_up_delay_hours(class="form-control") }}
+                <span class="input-group-text">heures</span>
+              </div>
+              {% for e in form.follow_up_delay_hours.errors %}
+              <div class="text-danger small mt-1">{{ e }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-8 mb-3">
+              {{ form.follow_up_template_id.label(class="form-label") }} {{
+              form.follow_up_template_id(class="form-select") }}
+            </div>
+          </div>
+
+          <div class="mb-0">
+            {{ form.follow_up_message.label(class="form-label") }} {{
+            form.follow_up_message(class="form-control" + (" is-invalid" if
+            form.follow_up_message.errors else ""), rows=4, placeholder="Bonjour
+            {{prenom}}, avez-vous eu le temps de lire mon message ?") }} {% for
+            e in form.follow_up_message.errors %}
+            <div class="invalid-feedback">{{ e }}</div>
+            {% endfor %}
+            <div class="form-text">
+              Utilisé si aucun template de relance n'est sélectionné ci-dessus.
             </div>
           </div>
         </div>
@@ -173,7 +268,35 @@
 </form>
 {% endblock %} {% block scripts %}
 <script>
-  // Compteur de contacts sélectionnés
+  document.addEventListener("DOMContentLoaded", function () {
+    // ============================================
+    // 1. LOGIQUE A/B TESTING
+    // ============================================
+    const abToggle = document.getElementById("abToggle");
+    const abContainer = document.getElementById("abMessageContainer");
+    if (abToggle && abContainer) {
+      abToggle.addEventListener("change", function () {
+        abContainer.style.display = this.checked ? "block" : "none";
+      });
+      if (abToggle.checked) abContainer.style.display = "block";
+    }
+
+    // ============================================
+    // 2. LOGIQUE RELANCE AUTOMATIQUE
+    // ============================================
+    const followUpToggle = document.getElementById("followUpToggle");
+    const followUpSettings = document.getElementById("followUpSettings");
+    if (followUpToggle && followUpSettings) {
+      followUpToggle.addEventListener("change", function () {
+        followUpSettings.style.display = this.checked ? "block" : "none";
+      });
+      if (followUpToggle.checked) followUpSettings.style.display = "block";
+    }
+  });
+
+  // ============================================
+  // 3. COMPTEUR DE CONTACTS
+  // ============================================
   const counter = document.getElementById("contactCounter");
   const checks = document.querySelectorAll(".contact-check");
   function updateCounter() {
@@ -183,7 +306,7 @@
   checks.forEach((c) => c.addEventListener("change", updateCounter));
   updateCounter();
 
-  // Sélection globale
+  // 4. Sélection globale
   const selectAll = document.getElementById("selectAllContacts");
   if (selectAll) {
     selectAll.addEventListener("change", () => {
@@ -198,7 +321,7 @@
     });
   }
 
-  // Recherche locale
+  // 5. Recherche locale
   const searchInput = document.getElementById("contactSearch");
   if (searchInput) {
     searchInput.addEventListener("input", () => {
@@ -212,7 +335,7 @@
   }
 
   // ============================================
-  // 🖼️ APERÇU DU MÉDIA SÉLECTIONNÉ
+  // 6. APERÇU DU MÉDIA
   // ============================================
   const mediaSelect = document.getElementById("mediaFileSelect");
   const mediaPreview = document.getElementById("mediaPreview");
@@ -223,67 +346,64 @@
 
   async function loadMediaPreview(mediaId) {
     if (!mediaId || mediaId === "0") {
-      mediaPreview.style.display = "none";
+      if (mediaPreview) mediaPreview.style.display = "none";
       return;
     }
-
     try {
       const res = await fetch(`/media/api/${mediaId}`, {
         credentials: "same-origin",
       });
       const data = await res.json();
-
       if (!data.success) {
-        mediaPreview.style.display = "none";
+        if (mediaPreview) mediaPreview.style.display = "none";
         return;
       }
-
       const m = data.media;
-      mediaPreview.style.display = "block";
+      if (mediaPreview) mediaPreview.style.display = "block";
+      if (mediaName) mediaName.textContent = m.original_name;
+      if (mediaMeta)
+        mediaMeta.textContent = `${m.size_human}${m.width && m.height ? " · " + m.width + "×" + m.height + " px" : ""}`;
 
-      // Nom + meta
-      mediaName.textContent = m.original_name;
-      mediaMeta.textContent = `${m.size_human}${m.width && m.height ? " · " + m.width + "×" + m.height + " px" : ""}`;
-
-      // Badge
-      mediaBadge.className = "badge";
-      if (m.media_type === "image") {
-        mediaBadge.classList.add("bg-primary");
-        mediaBadge.textContent = "Image";
-      } else if (m.media_type === "video") {
-        mediaBadge.classList.add("bg-info", "text-dark");
-        mediaBadge.textContent = "Vidéo";
-      } else {
-        mediaBadge.classList.add("bg-danger");
-        mediaBadge.textContent = "Document";
+      if (mediaBadge) {
+        mediaBadge.className = "badge";
+        if (m.media_type === "image") {
+          mediaBadge.classList.add("bg-primary");
+          mediaBadge.textContent = "Image";
+        } else if (m.media_type === "video") {
+          mediaBadge.classList.add("bg-info", "text-dark");
+          mediaBadge.textContent = "Vidéo";
+        } else {
+          mediaBadge.classList.add("bg-danger");
+          mediaBadge.textContent = "Document";
+        }
       }
 
-      // Miniature
-      mediaThumb.innerHTML = "";
-      if (m.media_type === "image") {
-        const img = document.createElement("img");
-        img.src = "/static/" + m.file_path;
-        img.style.cssText =
-          "width: 80px; height: 80px; object-fit: cover; border-radius: 8px;";
-        mediaThumb.appendChild(img);
-      } else if (m.media_type === "video") {
-        mediaThumb.innerHTML =
-          '<div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0ea5e9, #0c4a6e); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-play-circle text-white" style="font-size: 2rem;"></i></div>';
-      } else {
-        mediaThumb.innerHTML =
-          '<div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ef4444, #991b1b); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-file-earmark-pdf text-white" style="font-size: 2rem;"></i></div>';
+      if (mediaThumb) {
+        mediaThumb.innerHTML = "";
+        if (m.media_type === "image") {
+          const img = document.createElement("img");
+          img.src = "/static/" + m.file_path;
+          img.style.cssText =
+            "width: 80px; height: 80px; object-fit: cover; border-radius: 8px;";
+          mediaThumb.appendChild(img);
+        } else if (m.media_type === "video") {
+          mediaThumb.innerHTML =
+            '<div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0ea5e9, #0c4a6e); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-play-circle text-white" style="font-size: 2rem;"></i></div>';
+        } else {
+          mediaThumb.innerHTML =
+            '<div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ef4444, #991b1b); border-radius: 8px; display: flex; align-items: center; justify-content: center;"><i class="bi bi-file-earmark-pdf text-white" style="font-size: 2rem;"></i></div>';
+        }
       }
 
-      // Alerte taille
       const sizeMb = m.size_bytes / (1024 * 1024);
       const limits = { image: 5, video: 16, document: 100 };
-      if (sizeMb > limits[m.media_type]) {
+      if (sizeMb > limits[m.media_type] && mediaMeta) {
         mediaMeta.innerHTML +=
           ' <span class="text-danger">⚠️ Dépasse la limite WhatsApp</span>';
       }
     } catch (e) {
       console.error("[Media] Erreur chargement aperçu:", e);
-      mediaPreview.style.display = "none";
+      if (mediaPreview) mediaPreview.style.display = "none";
     }
   }
 
@@ -291,7 +411,6 @@
     mediaSelect.addEventListener("change", (e) => {
       loadMediaPreview(e.target.value);
     });
-    // Charger au démarrage si un média est déjà sélectionné
     loadMediaPreview(mediaSelect.value);
   }
 </script>
